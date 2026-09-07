@@ -627,18 +627,18 @@ export interface Member {
 }
 
 export const MOCK_MEMBERS: Member[] = [
-  { id: '11111111-0000-4000-8000-000000000001', name: '팝콘러버', email: 'popcorn.lover@gmail.com', joined_at: '2026-01-12', status: 'ACTIVE', review_count: 23 },
-  { id: '11111111-0000-4000-8000-000000000002', name: '무비매니아', email: 'moviemania82@gmail.com', joined_at: '2026-02-04', status: 'ACTIVE', review_count: 41 },
-  { id: '11111111-0000-4000-8000-000000000003', name: '영화광123', email: 'cinefan123@gmail.com', joined_at: '2026-03-17', status: 'ACTIVE', review_count: 8 },
-  { id: '11111111-0000-4000-8000-000000000004', name: '씨네필', email: 'cinephile.kr@gmail.com', joined_at: '2026-03-29', status: 'ACTIVE', review_count: 17 },
-  { id: '11111111-0000-4000-8000-000000000005', name: '악플러킹', email: 'troll.king99@gmail.com', joined_at: '2026-04-05', status: 'SUSPENDED', review_count: 3, status_updated_by: '김운영', status_updated_at: '2026-08-02 10:14:27' },
-  { id: '11111111-0000-4000-8000-000000000006', name: '드라마퀸', email: 'drama.queen.film@gmail.com', joined_at: '2026-04-22', status: 'ACTIVE', review_count: 14 },
-  { id: '11111111-0000-4000-8000-000000000007', name: '광고계정', email: 'ad.account7@gmail.com', joined_at: '2026-05-01', status: 'SUSPENDED', review_count: 1, status_updated_by: '이검수', status_updated_at: '2026-08-01 09:03:51' },
-  { id: '11111111-0000-4000-8000-000000000008', name: '영화좋아요', email: 'film.lover.kr@gmail.com', joined_at: '2026-05-14', status: 'ACTIVE', review_count: 6 },
-  { id: '11111111-0000-4000-8000-000000000009', name: '리뷰왕', email: 'review.king.movie@gmail.com', joined_at: '2026-06-03', status: 'ACTIVE', review_count: 55 },
-  { id: '11111111-0000-4000-8000-000000000010', name: '탈퇴회원', email: 'withdrawn.user@gmail.com', joined_at: '2026-06-18', status: 'WITHDRAWN', review_count: 2, status_updated_by: '김운영', status_updated_at: '2026-07-20 15:22:09' },
-  { id: '11111111-0000-4000-8000-000000000011', name: '조용한관객', email: 'silent.audience@gmail.com', joined_at: '2026-07-01', status: 'ACTIVE', review_count: 1 },
-  { id: '11111111-0000-4000-8000-000000000012', name: '점수후해', email: 'generous.score@gmail.com', joined_at: '2026-07-15', status: 'ACTIVE', review_count: 9 },
+  { id: '11111111-0000-4000-8000-000000000001', name: '팝콘러버', email: 'user@example.com', joined_at: '2026-01-12', status: 'ACTIVE', review_count: 23 },
+  { id: '11111111-0000-4000-8000-000000000002', name: '무비매니아', email: 'user@example.com', joined_at: '2026-02-04', status: 'ACTIVE', review_count: 41 },
+  { id: '11111111-0000-4000-8000-000000000003', name: '영화광123', email: 'user@example.com', joined_at: '2026-03-17', status: 'ACTIVE', review_count: 8 },
+  { id: '11111111-0000-4000-8000-000000000004', name: '씨네필', email: 'user@example.com', joined_at: '2026-03-29', status: 'ACTIVE', review_count: 17 },
+  { id: '11111111-0000-4000-8000-000000000005', name: '악플러킹', email: 'user@example.com', joined_at: '2026-04-05', status: 'SUSPENDED', review_count: 3, status_updated_by: '김운영', status_updated_at: '2026-08-02 10:14:27' },
+  { id: '11111111-0000-4000-8000-000000000006', name: '드라마퀸', email: 'user@example.com', joined_at: '2026-04-22', status: 'ACTIVE', review_count: 14 },
+  { id: '11111111-0000-4000-8000-000000000007', name: '광고계정', email: 'user@example.com', joined_at: '2026-05-01', status: 'SUSPENDED', review_count: 1, status_updated_by: '이검수', status_updated_at: '2026-08-01 09:03:51' },
+  { id: '11111111-0000-4000-8000-000000000008', name: '영화좋아요', email: 'user@example.com', joined_at: '2026-05-14', status: 'ACTIVE', review_count: 6 },
+  { id: '11111111-0000-4000-8000-000000000009', name: '리뷰왕', email: 'user@example.com', joined_at: '2026-06-03', status: 'ACTIVE', review_count: 55 },
+  { id: '11111111-0000-4000-8000-000000000010', name: '탈퇴회원', email: 'user@example.com', joined_at: '2026-06-18', status: 'WITHDRAWN', review_count: 2, status_updated_by: '김운영', status_updated_at: '2026-07-20 15:22:09' },
+  { id: '11111111-0000-4000-8000-000000000011', name: '조용한관객', email: 'user@example.com', joined_at: '2026-07-01', status: 'ACTIVE', review_count: 1 },
+  { id: '11111111-0000-4000-8000-000000000012', name: '점수후해', email: 'user@example.com', joined_at: '2026-07-15', status: 'ACTIVE', review_count: 9 },
 ]
 
 export const CURRENT_ADMIN = { id: 1, name: '김운영', email: 'admin@popcorn.kr', role: 'SUPER_ADMIN' }

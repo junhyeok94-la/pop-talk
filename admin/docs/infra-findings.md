@@ -57,7 +57,7 @@ popcorn-vpc-default-acg  INBND  TCP  0.0.0.0/0  3389
 popcorn-private-link-acg (no. 381084)  규칙 0건
 ```
 
-CLOVA Studio로 가는 PrivateLink(`10.0.3.13`)에 붙은 ACG인데 인바운드·아웃바운드 모두 비어 있습니다.
+CLOVA Studio로 가는 PrivateLink(`10.0.0.10`)에 붙은 ACG인데 인바운드·아웃바운드 모두 비어 있습니다.
 
 > **정정 (2026-08-10)** — 처음에는 이것이 임베딩이 0건인 원인이라고 적었습니다.
 > **아닙니다.** 배치 서버에서 확인해보니 CLOVA API에는 닿았고, 오히려 호출 한도를
@@ -77,15 +77,15 @@ CLOVA Studio로 가는 PrivateLink(`10.0.3.13`)에 붙은 ACG인데 인바운드
 
 | IP | **실제 서버** | 아키텍처 문서 |
 |---|---|---|
-| `10.0.3.6` | **popcorn-backend-1** | ❌ 문서에 없는 IP |
-| `10.0.3.7` | popcorn-web-1 | ✅ |
-| `10.0.3.8` | **popcorn-backend-2** | ❌ backend-**1**로 표기 |
-| `10.0.3.9` | popcorn-batch-1 | ✅ |
-| `10.0.3.10` | popcorn-was-2 | ✅ |
-| `10.0.3.11` | **popcorn-web-2** | ❌ was-**1**로 표기 |
-| `10.0.3.12` | **popcorn-was-1** | ❌ was-**2**로 표기 |
+| `10.0.0.10` | **popcorn-backend-1** | ❌ 문서에 없는 IP |
+| `10.0.0.10` | popcorn-web-1 | ✅ |
+| `10.0.0.10` | **popcorn-backend-2** | ❌ backend-**1**로 표기 |
+| `10.0.0.10` | popcorn-batch-1 | ✅ |
+| `10.0.0.10` | popcorn-was-2 | ✅ |
+| `10.0.0.10` | **popcorn-web-2** | ❌ was-**1**로 표기 |
+| `10.0.0.10` | **popcorn-was-1** | ❌ was-**2**로 표기 |
 
-**7개 중 4개가 다릅니다.** 특히 `10.0.3.6`은 문서에 아예 없어서 서버가 6대뿐이라고
+**7개 중 4개가 다릅니다.** 특히 `10.0.0.10`은 문서에 아예 없어서 서버가 6대뿐이라고
 읽기 쉽습니다. 배포 대상을 IP로 지정할 때 문서만 보면 엉뚱한 서버를 건드립니다.
 
 조회 방법 — bastion(`101.79.20.123`)에 키로 접속한 뒤 각 서버에 `hostname`을 물었습니다.
@@ -117,12 +117,12 @@ CLOVA Studio로 가는 PrivateLink(`10.0.3.13`)에 붙은 ACG인데 인바운드
 아래는 **실제 조회값**입니다. 문서의 해당 행과 대조해 주세요.
 
 ```
-popcorn-web-acg      INBND  TCP  10.0.0.0/23             80
-popcorn-was-acg      INBND  TCP  10.0.2.0/24             8080
-popcorn-backend-acg  INBND  TCP  10.0.2.0/24             8000
+popcorn-web-acg      INBND  TCP  10.0.0.10/23             80
+popcorn-was-acg      INBND  TCP  10.0.0.10/24             8080
+popcorn-backend-acg  INBND  TCP  10.0.0.10/24             8000
 popcorn-batch-acg    INBND  TCP  popcorn-bastion-acg     22   (SSH만)
-cloud-postgresql     INBND  TCP  10.0.5.0/24             5432  "bastion Subnet"
-cloud-postgresql     INBND  TCP  10.0.3.0/24             5432  "App Subnet"
+cloud-postgresql     INBND  TCP  10.0.0.10/24             5432  "bastion Subnet"
+cloud-postgresql     INBND  TCP  10.0.0.10/24             5432  "App Subnet"
 ```
 
 web·was·backend·batch 네 ACG 모두 `popcorn-bastion-acg`에서 오는 22번을 허용하고,
@@ -132,7 +132,7 @@ web·was·backend·batch 네 ACG 모두 `popcorn-bastion-acg`에서 오는 22번
 
 ## 4. 임베딩이 0건인 이유 — 확인했습니다
 
-2026-08-10, `popcorn-batch-1`(`10.0.3.9`)에 접속해 조회만 했습니다.
+2026-08-10, `popcorn-batch-1`(`10.0.0.10`)에 접속해 조회만 했습니다.
 
 ### DB 상태
 

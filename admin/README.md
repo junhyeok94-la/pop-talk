@@ -224,7 +224,7 @@ Notion은 마크다운 표·제목·코드블록을 그대로 받습니다.
 
 ```bash
 npm run docs:verify                                  # 기본 http://127.0.0.1:9000
-npm run docs:verify -- --upstream http://10.0.3.8:9000
+npm run docs:verify -- --upstream http://10.0.0.10:9000
 npm run docs:verify -- --token "$JWT" --all          # 인증 · 쓰기 메서드까지
 ```
 

@@ -834,7 +834,7 @@ paths:
                 items:
                   - id: 11111111-0000-4000-8000-000000000001
                     nickname: 팝콘러버
-                    email: popcorn.lover@gmail.com
+                    email: user@example.com
                     status: ACTIVE
                     joined_at: '2026-01-12'
                     review_count: 23
