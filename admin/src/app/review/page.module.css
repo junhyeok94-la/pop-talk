@@ -1,0 +1,18 @@
+.title {
+  font-size: var(--seed-font-size-t3);
+  font-weight: var(--seed-font-weight-medium);
+  color: var(--seed-color-fg-neutral);
+}
+
+
+/* service_status는 값이 셋이라 뱃지로 실제 값을 보여주고 스위치를 옆에 둔다. */
+/* 제목·감독이 글자 단위로 접히면 행 높이가 널뛴다. */
+.title {
+  min-width: 7rem;
+}
+
+.serviceCell {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: center;
+}

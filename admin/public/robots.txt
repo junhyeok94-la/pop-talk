@@ -1,0 +1,3 @@
+# 관리자 콘솔은 색인 대상이 아니다.
+User-agent: *
+Disallow: /

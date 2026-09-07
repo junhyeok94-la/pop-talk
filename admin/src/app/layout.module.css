@@ -1,0 +1,20 @@
+.shell {
+  display: flex;
+  min-height: 100vh;
+  font-family: var(--font-noto-sans-kr), var(--font-inter), system-ui, sans-serif;
+
+  /* GNB 높이. 영화 상세의 sticky 헤더가 GNB 아래에 붙도록 여기서 한 번만 정의한다. */
+  --gnb-height: 56px;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+}

@@ -1,0 +1,14 @@
+[Unit]
+Description=Pop Talk embedding queue worker
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/popcorn/pop_talk_batch
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/popcorn/pop_talk_batch/.venv/bin/python -m embedding.worker --once --batch-size 20 --lease-seconds 600 --api-attempts 3 --request-interval 1.1
+SyslogIdentifier=pop-talk-embedding
+StandardOutput=journal
+StandardError=journal
+TimeoutStartSec=infinity

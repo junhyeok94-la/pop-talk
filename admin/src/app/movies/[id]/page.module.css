@@ -1,0 +1,356 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.header {
+  position: sticky;
+  /* GNB 바로 아래에 붙는다 (--gnb-height는 layout.module.css에서 정의). */
+  top: var(--gnb-height, 0px);
+  /* GNB와 같은 이유로 Seed 오버레이(2) 아래에 둔다. */
+  z-index: 1;
+  display: flex;
+  gap: var(--seed-dimension-x3);
+  align-items: center;
+  padding: var(--seed-dimension-x4) var(--seed-dimension-x6);
+  background: var(--seed-color-bg-layer-default);
+  border-bottom: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+.back {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--seed-radius-r3);
+  color: var(--seed-color-fg-neutral-muted);
+  transition: background-color 120ms ease;
+}
+
+.back:hover {
+  background: var(--seed-color-bg-layer-fill);
+}
+
+.headerTitle {
+  font-size: var(--seed-font-size-t5);
+  font-weight: var(--seed-font-weight-bold);
+  color: var(--seed-color-fg-neutral);
+}
+
+.headerRight {
+  margin-left: auto;
+}
+
+/* 요약 카드는 좌우 분할 밖에 두어 화면 폭을 다 쓴다. */
+.summary {
+  padding: var(--seed-dimension-x5) var(--seed-dimension-x6) 0;
+}
+
+.body {
+  display: grid;
+  grid-template-columns: 3fr 2fr;
+  flex: 1;
+  align-items: start;
+}
+
+.info {
+  display: grid;
+  align-content: start;
+  gap: var(--seed-dimension-x5);
+  padding: var(--seed-dimension-x6);
+  border-right: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+.hero {
+  display: flex;
+  gap: var(--seed-dimension-x5);
+}
+
+.heroPoster {
+  flex-shrink: 0;
+  width: 160px;
+  height: 224px;
+  object-fit: cover;
+  background: var(--seed-color-bg-layer-fill);
+  border-radius: var(--seed-radius-r5);
+  box-shadow: 0 4px 12px rgb(0 0 0 / 10%);
+}
+
+.heroMain {
+  display: grid;
+  align-content: start;
+  gap: var(--seed-dimension-x3);
+  flex: 1;
+  min-width: 0;
+}
+
+.movieTitle {
+  font-size: var(--seed-font-size-t7);
+  font-weight: var(--seed-font-weight-bold);
+  color: var(--seed-color-fg-neutral);
+}
+
+.specs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--seed-dimension-x2) var(--seed-dimension-x4);
+}
+
+.specs dt {
+  font-size: var(--seed-font-size-t2);
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.specs dd {
+  font-size: var(--seed-font-size-t4);
+  font-weight: var(--seed-font-weight-medium);
+  color: var(--seed-color-fg-neutral);
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--seed-dimension-x1);
+  font-size: var(--seed-font-size-t2);
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.genreTag {
+  display: inline-block;
+  padding: 2px var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t2);
+  border: 1px solid var(--seed-color-stroke-brand-weak);
+  border-radius: var(--seed-radius-full);
+  background: var(--seed-color-bg-brand-weak);
+  color: var(--seed-color-fg-brand);
+}
+
+.sectionTitle {
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-bold);
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.synopsis {
+  margin-top: var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t4);
+  line-height: 1.7;
+  color: var(--seed-color-fg-neutral);
+}
+
+.kmdb {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: center;
+  font-size: var(--seed-font-size-t2);
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.mono {
+  font-family: var(--font-inter), ui-monospace, monospace;
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+/* ── 우측 심사 패널 ─────────────────────────────────── */
+
+.panel {
+  display: grid;
+  align-content: start;
+  gap: var(--seed-dimension-x5);
+  padding: var(--seed-dimension-x6);
+  background: var(--seed-color-bg-layer-basement);
+}
+
+.panelCard {
+  display: grid;
+  gap: var(--seed-dimension-x3);
+  padding: var(--seed-dimension-x4);
+}
+
+.panelHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--seed-dimension-x2);
+}
+
+
+
+
+
+
+
+.scoreRow {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: baseline;
+}
+
+.scoreValue {
+  font-size: var(--seed-font-size-t12);
+  font-weight: var(--seed-font-weight-bold);
+  line-height: 1;
+  color: var(--seed-color-fg-brand);
+}
+
+.scoreMeter {
+  display: block;
+  width: 100%;
+  height: 8px;
+  overflow: hidden;
+  border-radius: var(--seed-radius-full);
+  background: var(--seed-color-bg-neutral-weak);
+}
+
+.scoreMeterFill {
+  display: block;
+  height: 100%;
+  border-radius: var(--seed-radius-full);
+  background: var(--seed-color-bg-brand-solid);
+}
+
+.timeline {
+  display: grid;
+  gap: var(--seed-dimension-x3);
+  list-style: none;
+}
+
+.timelineItem {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: flex-start;
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: var(--seed-radius-full);
+}
+
+.dotPositive {
+  background: var(--seed-color-bg-positive-solid);
+}
+.dotInformative {
+  background: var(--seed-color-bg-informative-solid);
+}
+.dotMagic {
+  background: var(--seed-color-palette-gray-600);
+}
+.dotNeutral {
+  background: var(--seed-color-palette-gray-400);
+}
+
+.timelineTime {
+  font-size: var(--seed-font-size-t1);
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.timelineHead {
+  display: flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+}
+
+.timelineAction {
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-medium);
+  color: var(--seed-color-fg-neutral);
+}
+
+.timelineNote {
+  font-size: var(--seed-font-size-t1);
+  font-style: italic;
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.actions {
+  display: grid;
+  gap: var(--seed-dimension-x2);
+}
+
+.settled {
+  display: grid;
+  justify-items: center;
+  gap: var(--seed-dimension-x2);
+  padding: var(--seed-dimension-x4) 0;
+  text-align: center;
+}
+
+/* ── 모달 내부 ──────────────────────────────────────── */
+
+.editField label,
+.sliderRow {
+  display: flex;
+  gap: var(--seed-dimension-x3);
+  align-items: center;
+}
+
+.sliderRow > :last-child {
+  flex-shrink: 0;
+  min-width: 2.75rem;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.sliderRow input[type="range"] {
+  flex: 1;
+  accent-color: var(--seed-color-bg-brand-solid);
+}
+
+.checkList {
+  display: grid;
+  gap: var(--seed-dimension-x1);
+  max-height: 8rem;
+  overflow-y: auto;
+}
+
+
+/* ── 추천 임베딩 패널 ─────────────────────────────────── */
+
+.embedding {
+  display: grid;
+  gap: var(--seed-dimension-x2);
+  margin-top: var(--seed-dimension-x3);
+}
+
+.embedding > div {
+  display: flex;
+  gap: var(--seed-dimension-x3);
+  justify-content: space-between;
+  align-items: center;
+}
+
+.embedding dt {
+  font-size: var(--seed-font-size-t4);
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.embedding dd {
+  font-size: var(--seed-font-size-t4);
+}
+
+.embeddingTag {
+  padding: 1px var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t1);
+  font-weight: var(--seed-font-weight-medium);
+  border-radius: var(--seed-radius-r1);
+}
+
+.embeddingFailed {
+  background: var(--seed-color-bg-critical-weak);
+  color: var(--seed-color-fg-critical);
+}
+
+.embeddingError {
+  margin-top: var(--seed-dimension-x2);
+  padding: var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t2);
+  line-height: 1.5;
+  border-radius: var(--seed-radius-r2);
+  background: var(--seed-color-bg-critical-weak);
+  color: var(--seed-color-fg-critical);
+}

@@ -1,0 +1,255 @@
+/*
+ * 10개 화면이 공유하는 스타일 프리미티브.
+ * Figma Make 원본의 Tailwind 유틸리티(bg-white rounded-xl border border-gray-200 …)가
+ * 페이지마다 반복되던 것을 여기 한 곳으로 모으고, 각 페이지는 composes로 가져다 쓴다.
+ */
+
+.page {
+  display: grid;
+  align-content: start;
+  gap: var(--seed-dimension-x6);
+  padding: var(--seed-dimension-x6);
+}
+
+.pageTight {
+  composes: page;
+  gap: var(--seed-dimension-x4);
+}
+
+.pageHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--seed-dimension-x4);
+}
+
+/*
+ * overflow: hidden은 둥근 모서리 밖으로 내용이 삐져나오지 않게 하려는 것이다.
+ * 그런데 표가 카드보다 넓어지면 오른쪽 끝이 **잘려서 닿을 수 없게** 된다 —
+ * 문구 화면에서 삭제 버튼이 그렇게 사라져 있었다.
+ *
+ * auto로 두면 넘칠 때만 가로 스크롤이 생긴다. 모서리는 그대로 지켜진다.
+ */
+.card {
+  overflow-x: auto;
+  overflow-y: hidden;
+  background: var(--seed-color-bg-layer-default);
+  border: 1px solid var(--seed-color-stroke-neutral-subtle);
+  border-radius: var(--seed-radius-r5);
+}
+
+.cardHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--seed-dimension-x3);
+  padding: var(--seed-dimension-x4) var(--seed-dimension-x5);
+  border-bottom: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+.cardFoot {
+  padding: var(--seed-dimension-x3) var(--seed-dimension-x5);
+  border-top: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+/* ── 테이블 ─────────────────────────────────────────── */
+
+.table {
+  width: 100%;
+  table-layout: auto;
+}
+
+.table thead tr {
+  background: var(--seed-color-bg-layer-fill);
+  border-bottom: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+.table th {
+  padding: var(--seed-dimension-x3);
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-medium);
+  text-align: left;
+  white-space: nowrap;
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.table td {
+  padding: var(--seed-dimension-x2) var(--seed-dimension-x3);
+  /* 본문 t3(13px). t2(12px)까지 내리면 보조 단과 같아져 두 단 구분이 사라진다. */
+  font-size: var(--seed-font-size-t3);
+  vertical-align: middle;
+  color: var(--seed-color-fg-neutral);
+}
+
+.table tbody tr {
+  border-top: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+/*
+ * 셀 안의 아이콘은 글자 크기에 맞춘다. 화면마다 size={10}~{14}로 제각각이라
+ * 같은 행에서 아이콘만 크거나 작아 보였다. 1em이면 본문이 바뀌어도 따라온다.
+ * 포스터(img)와 스위치(div)는 svg가 아니라 영향받지 않는다.
+ */
+.table td svg {
+  width: 1em;
+  height: 1em;
+}
+
+.rowLink {
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.rowLink:hover {
+  background: var(--seed-color-bg-brand-weak);
+}
+
+/* 테이블 밖 보조 텍스트. 셀 기본값을 상속할 부모가 없는 자리에서 쓴다. */
+.caption {
+  composes: muted;
+  font-size: var(--seed-font-size-t2);
+}
+
+.muted {
+  /* 크기는 지정하지 않는다. 셀 기본값(t4)을 상속받고 색만 흐리게 한다.
+     예전엔 여기서 t2까지 걸어서 이메일·사유 같은 본문이 덩달아 작아졌다. */
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.score {
+  font-size: var(--seed-font-size-t3);
+  font-weight: var(--seed-font-weight-bold);
+  color: var(--seed-color-fg-brand);
+}
+
+/* ── 태그 ───────────────────────────────────────────── */
+
+.tag {
+  display: inline-block;
+  max-width: 15rem;
+  overflow: hidden;
+  padding: 2px var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t1);
+  line-height: 1rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  border-radius: var(--seed-radius-full);
+  background: var(--seed-color-bg-informative-weak);
+  color: var(--seed-color-fg-informative);
+}
+
+.tagNeutral {
+  composes: tag;
+  border-radius: var(--seed-radius-r2);
+  background: var(--seed-color-bg-neutral-weak);
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.tagRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+}
+
+/* ── 버튼 ───────────────────────────────────────────── */
+
+.textButton {
+  display: inline-flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+  min-height: 24px;
+  padding: 0 var(--seed-dimension-x1);
+  /* 셀 안의 텍스트 버튼도 본문과 같은 t3를 쓴다. 굵기로만 구분한다. */
+  font-size: var(--seed-font-size-t3);
+  font-weight: var(--seed-font-weight-bold);
+  border-radius: var(--seed-radius-r2);
+  color: var(--seed-color-fg-brand);
+  transition: background-color 120ms ease;
+}
+
+.textButton:hover {
+  background: var(--seed-color-bg-brand-weak);
+}
+
+.dangerButton {
+  composes: textButton;
+  color: var(--seed-color-fg-critical);
+}
+
+.dangerButton:hover {
+  background: var(--seed-color-bg-critical-weak);
+}
+
+/* ── 필터 바 ────────────────────────────────────────── */
+
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--seed-dimension-x3);
+  align-items: center;
+  padding: var(--seed-dimension-x3) var(--seed-dimension-x4);
+  background: var(--seed-color-bg-layer-default);
+  border: 1px solid var(--seed-color-stroke-neutral-subtle);
+  border-radius: var(--seed-radius-r5);
+}
+
+/* ── 페이지네이션 ───────────────────────────────────── */
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--seed-dimension-x3) var(--seed-dimension-x4);
+  background: var(--seed-color-bg-layer-fill);
+  border-top: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+.pageButtons {
+  display: flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+}
+
+.pageButton {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  font-size: var(--seed-font-size-t2);
+  border-radius: var(--seed-radius-r2);
+  color: var(--seed-color-fg-neutral-muted);
+  transition: background-color 120ms ease;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: var(--seed-color-bg-neutral-weak);
+}
+
+.pageButton:disabled {
+  opacity: .4;
+}
+
+.pageButtonActive:hover:not(:disabled) {
+  background: var(--seed-color-bg-brand-solid);
+}
+
+/* ── 필터 바 안의 Seed 폼 요소 ─────────────────────────
+ * Seed의 Select·TextField는 모바일 기준이라 기본이 전체 너비다.
+ * 어드민의 가로 필터 바에서는 폭을 직접 제한해야 한 줄에 들어간다. */
+
+.filterSelect {
+  flex: 0 0 auto;
+  width: 11rem;
+}
+
+.filterSearch {
+  flex: 1 1 16rem;
+  min-width: 11rem;
+  max-width: 26rem;
+}
+
+.filterDate {
+  flex: 0 0 auto;
+  width: 9.5rem;
+}

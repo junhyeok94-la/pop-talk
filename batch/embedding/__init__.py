@@ -1,0 +1,1 @@
+"""Embedding queue worker package."""

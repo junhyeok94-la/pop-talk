@@ -1,0 +1,40 @@
+{
+  "name": "@pop-talk/admin",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3100",
+    "build": "node scripts/build-api-docs.mjs && next build",
+    "start": "next start -p 3100",
+    "lint": "eslint",
+    "snapshot": "node scripts/snapshot.mjs",
+    "docs:api": "node scripts/build-api-docs.mjs",
+    "docs:diff": "node scripts/spec-diff.mjs",
+    "docs:verify": "node scripts/spec-verify.mjs",
+    "docs:notion": "node scripts/build-notion-doc.mjs",
+    "docs:lint": "node -e \"import('./scripts/spec-path.mjs').then(async m=>{const{execFileSync}=await import('node:child_process');execFileSync('npx',['--yes','@redocly/cli@latest','lint',m.resolveSpecPath()],{stdio:'inherit'})})\"",
+    "docs:path": "node -e \"import('./scripts/spec-path.mjs').then(m=>console.log(m.resolveSpecPath()))\""
+  },
+  "dependencies": {
+    "@seed-design/css": "2.4.0",
+    "@seed-design/react": "2.1.1",
+    "@seed-design/react-icon": "^0.7.4",
+    "next": "16.3.0",
+    "pg": "^8.22.0",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/pg": "^8.21.0",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.0",
+    "redoc": "^2.5.3",
+    "server-only": "^0.0.1",
+    "swagger-ui-dist": "^5.32.12",
+    "typescript": "^5",
+    "yaml": "^2.9.0"
+  }
+}

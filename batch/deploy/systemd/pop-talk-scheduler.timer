@@ -1,0 +1,12 @@
+[Unit]
+Description=Run Pop Talk movie synchronization daily at 03:00 KST
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 Asia/Seoul
+Persistent=true
+AccuracySec=1min
+Unit=pop-talk-scheduler.service
+
+[Install]
+WantedBy=timers.target
+

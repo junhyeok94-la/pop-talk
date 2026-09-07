@@ -1,0 +1,1978 @@
+openapi: 3.1.0
+
+info:
+  title: 팝콘톡 Admin API
+  version: 0.1.0
+  license:
+    name: Proprietary
+  description: |
+    팝콘톡 관리자 콘솔이 쓰는 API입니다.
+    화면 10개가 실제로 호출하는 것만 담았고, 화면에 없는 기능은 넣지 않았습니다.
+
+    ## 작성 근거
+
+    - **영화 도메인**은 실제 DB(`dev` 스키마)의 컬럼명·타입을 그대로 씁니다.
+      화면에서 이름을 바꾸면 매핑 층이 하나 더 생기므로 그러지 않았습니다.
+    - **회원 도메인**은 아직 테이블이 없습니다. `docs/user-domain-draft.sql`의
+      초안을 전제로 작성했으므로, 스키마가 확정되면 함께 조정해야 합니다.
+    - 조회 응답은 `dev.popcorn_movies_service` 뷰를 그대로 내려주는 형태입니다.
+      이 뷰가 `is_embedded`와 `media`를 미리 붙여줍니다.
+
+    ## 규약
+
+    | 항목 | 규칙 |
+    |---|---|
+    | 목록 | `page`(1부터) · `size`(기본 10) · 응답에 `page`·`size`·`total`·`total_pages` |
+    | 날짜 | 날짜는 `YYYY-MM-DD`, 시각은 `YYYY-MM-DD HH:mm:ss` (KST) |
+    | 기간 필터 | `*_from` · `*_to`, 양끝 포함. 한쪽만 주면 그쪽만 제한 |
+    | 정렬 | `sort=필드:asc|desc`. 기본값은 엔드포인트마다 명시 |
+    | 부분 수정 | `PATCH` + 바꿀 필드만. 빈 객체는 400 |
+    | 오류 | RFC 9457 `application/problem+json` |
+
+    ## 인증
+
+    > **이번 범위에서 관리자 로그인은 만들지 않기로 했습니다.**
+    > `/auth/*` 세 개는 목표 설계로 남겨둔 것이며 이번 구현 대상이 아닙니다.
+    > 그동안 API를 무엇으로 보호할지, 감사 기록의 "누가"를 무엇으로 채울지는
+    > 아래 *로그인 없이 가는 동안* 을 보세요.
+
+    `/auth/login`·`/auth/refresh`를 제외한 모든 요청에
+    `Authorization: Bearer <JWT>`가 필요합니다.
+    토큰에는 관리자 `id`와 `role`이 들어갑니다. 감사 로그의 "누가"는 서버가
+    토큰에서 읽어 채웁니다 — 클라이언트가 보내는 값을 믿지 않습니다.
+
+    | | |
+    |---|---|
+    | 액세스 토큰 | 15분. 응답 본문으로 내려주고 **메모리에만** 보관 |
+    | 리프레시 토큰 | 14일. `httpOnly` · `Secure` · `SameSite=Strict` 쿠키, 갱신 시 회전 |
+
+    액세스 토큰을 `localStorage`에 넣으면 XSS 한 번에 털립니다.
+
+    > **이 인증 설계는 제안이지 결정이 아닙니다.** 흔한 형태로 초안을 잡은 것이라,
+    > 팀이 SSO를 쓰거나 만료 정책이 다르면 그대로 바꾸면 됩니다.
+
+    ## 회원과 관리자는 한 테이블입니다
+
+    > **2026-08-11 정정** — 아래는 실제 DB를 확인해 고친 내용입니다.
+    > 8/9에는 "`users` 하나에 `role`로 가른다"고 적었으나, 담당자가 만든 실제
+    > `dev.users`에는 **`role` 컬럼이 없고** `members_service` 뷰도 없습니다.
+    > 관리자 테이블도 아직 없습니다.
+
+    | 화면 | 읽을 것 | 상태 |
+    |---|---|---|
+    | 서비스 영화 · 인증완료 · 영화 상세 | `dev.popcorn_movies_service` | ✅ 5,309편 |
+    | 회원 관리 · 회원 상세 | `dev.users` | 테이블은 있으나 0행 |
+    | 감상평 | `dev.reviews` | 테이블은 있으나 0행 |
+    | 관리자 관리 · GNB 계정 | **아직 없음** | 테이블 신설 필요 |
+
+    **`role` 필터는 필요 없습니다.** `dev.users`는 앱 사용자 전용입니다
+    (`onboarding_status`·`profile_image_url` 같은 컬럼이 그 근거입니다).
+    관리자는 별도 테이블로 갈 예정이라 섞일 일이 없습니다.
+
+    **영화는 `popcorn_movies`(bigint)를 봅니다.** `dev.movies`(uuid)라는 테이블이
+    따로 있고 감상평·찜·시청기록은 그쪽을 참조하지만, 지금 0편이고 admin이 검수하는
+    대상은 수집 계층입니다. 두 계층을 잇는 단계는 아직 정리되지 않았습니다.
+
+    ## 로그인 없이 가는 동안
+
+    로그인을 만들지 않으면 토큰이 없고, 토큰이 없으면 두 가지가 비어 버립니다.
+
+    | 비는 것 | 왜 |
+    |---|---|
+    | API 보호 | 모든 엔드포인트가 `Bearer` 토큰을 전제로 합니다 |
+    | 감사 주체 | `approved_by`·`status_updated_by`를 토큰에서 읽기로 했습니다 |
+
+    두 번째가 특히 문제입니다. **검증 로그 화면이 "누가 인증했는지"를 보여주는데
+    그 값의 출처가 사라집니다.** 실 DB의 5,985편도 지금은 `approved_by`가
+    전부 `initial-dataset`입니다.
+
+    임시 방안은 팀이 정할 사항이라 명세에는 넣지 않았습니다.
+    다만 정해지기 전까지는 이 두 자리가 비어 있다는 점을 기억하세요.
+
+    ## 목 서버로 먼저 붙이기
+
+    이 명세만으로 목 서버가 뜹니다. 백엔드 구현 전에 화면 개발을 시작할 수 있습니다.
+
+    ```
+    npx @stoplight/prism-cli mock docs/openapi.yaml -p 4010
+    curl -H 'Authorization: Bearer test' 'http://localhost:4010/movies?page=1&size=2'
+    ```
+
+    동작을 확인했습니다 — 토큰 없이 호출하면 `401`, `page=abc`면 `422`,
+    사유 없이 반려하면 `400`이 명세만으로 나옵니다.
+    응답 예시는 지어내지 않고 실 DB 레코드를 그대로 넣었습니다.
+
+    ## 아직 확정이 아닌 것
+
+    | 항목 | 상태 |
+    |---|---|
+    | 영화 점수 | `movies.pop_talk_score`로 **생겼습니다**. 다만 admin이 보는 `popcorn_movies`에는 없습니다 |
+    | `categories` | 테이블 없음. 초안은 `docs/category-domain-draft.sql` (미실행) |
+    | `/members` 계열 7개 | 테이블은 생겼으나 **구조가 다름** — 실제는 `users.id`가 uuid, `role` 없음, `reviews.rating` |
+    | 취향 갱신 배치 | 일정상 **이번 범위 아님**. `/members/{memberId}/preference-updates`도 함께 보류 |
+
+servers:
+  - url: https://api.poptalk.kr/admin/v1
+    description: 운영
+  - url: http://localhost:9000/admin/v1
+    description: 로컬 — 직접 띄운 백엔드 (아키텍처 문서의 backend 포트 9000)
+  - url: http://localhost:4010
+    description: 목 서버 — npx @stoplight/prism-cli mock docs/openapi.yaml -p 4010
+
+security:
+  - bearerAuth: []
+
+tags:
+  - name: auth
+    description: 로그인 · 토큰 갱신 · 로그아웃 (⚠️ 이번 개발 범위 아님)
+  - name: movies
+    description: 서비스 영화 · 인증완료 영화 · 영화 상세
+  - name: movie-categories
+    description: 카테고리 관리 (영화 분류)
+  - name: display-categories
+    description: 화면 문구 관리 (사용자 화면 알약 문구)
+  - name: reviews
+    description: 감상평 관리
+  - name: members
+    description: 회원 관리 · 회원 상세
+  - name: admins
+    description: 관리자 관리 (⚠️ 이번 개발 범위 아님)
+  - name: push
+    description: 푸시 발송 및 이력 (⚠️ 이번 개발 범위 아님)
+  - name: logs
+    description: 검증 로그 (⚠️ 이번 개발 범위 아님)
+  - name: batches
+    description: 배치 실행 현황
+  - name: dashboard
+    description: 대시보드 집계
+  - name: ops
+    description: 운영 — 로드밸런서 헬스체크
+
+paths:
+  # ────────────────────────────────────────────────────────────────
+  # 인증
+  # ────────────────────────────────────────────────────────────────
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: 로그인
+      description: |
+        **이 엔드포인트만 인증이 필요 없습니다.**
+
+        액세스 토큰은 짧게(15분), 리프레시 토큰은 길게(14일) 둡니다.
+        리프레시 토큰은 **httpOnly·Secure·SameSite=Strict 쿠키**로 내려 XSS로 탈취되지
+        않게 합니다. 액세스 토큰만 본문으로 주고 클라이언트가 메모리에 듭니다.
+
+        정지된 계정(`status=SUSPENDED`)은 403입니다.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, format: password, minLength: 8 }
+            example: { email: kimwoon@popcorn.kr, password: '********' }
+      responses:
+        '200':
+          description: 성공. 리프레시 토큰은 Set-Cookie로 내려갑니다
+          headers:
+            Set-Cookie:
+              description: '`refresh_token=…; HttpOnly; Secure; SameSite=Strict; Max-Age=1209600`'
+              schema: { type: string }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResult' }
+              example:
+                access_token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+                token_type: Bearer
+                expires_in: 900
+                admin:
+                  id: 1
+                  name: 김운영
+                  email: kimwoon@popcorn.kr
+                  role: SUPER_ADMIN
+                  status: ACTIVE
+                  joined_at: '2025-12-01 09:00:00'
+        '401':
+          description: 이메일 또는 비밀번호 불일치
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: 'https://api.poptalk.kr/problems/invalid-credentials'
+                title: 로그인에 실패했습니다
+                status: 401
+                detail: 이메일 또는 비밀번호를 확인해주세요.
+        '403':
+          description: 정지된 계정
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /auth/refresh:
+    post:
+      operationId: refreshToken
+      tags: [auth]
+      summary: 액세스 토큰 갱신
+      description: |
+        쿠키의 리프레시 토큰으로 새 액세스 토큰을 받습니다. 본문은 없습니다.
+        갱신할 때 리프레시 토큰도 새로 발급(rotation)해 재사용 공격을 막습니다.
+      security: []
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResult' }
+        '401':
+          description: 리프레시 토큰이 없거나 만료됨. 다시 로그인해야 합니다
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: 로그아웃
+      description: 리프레시 토큰을 무효화하고 쿠키를 지웁니다. GNB 우측 버튼이 호출합니다.
+      responses:
+        '204': { description: 로그아웃됨 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ────────────────────────────────────────────────────────────────
+  # 영화
+  # ────────────────────────────────────────────────────────────────
+  /movies:
+    get:
+      operationId: listMovies
+      tags: [movies]
+      summary: 영화 목록
+      description: |
+        서비스 영화 화면과 인증완료 영화 화면이 같은 엔드포인트를 씁니다.
+        인증완료 화면은 `approval_status=APPROVED`를 붙여 호출합니다.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: approval_status
+          in: query
+          description: 여러 개면 콤마로 구분
+          schema: { type: string, example: 'PENDING,APPROVED' }
+        - name: service_status
+          in: query
+          schema: { $ref: '#/components/schemas/MovieServiceStatus' }
+        - name: genre
+          in: query
+          description: 장르 정확 일치. `genres` 배열에 포함되면 매칭
+          schema: { type: string, example: 드라마 }
+        - name: q
+          in: query
+          description: 제목·감독·배우 부분 일치
+          schema: { type: string }
+        - name: synced_from
+          in: query
+          description: 수집일시 시작
+          schema: { type: string, format: date }
+        - name: synced_to
+          in: query
+          schema: { type: string, format: date }
+        - name: approved_from
+          in: query
+          description: 인증일시 시작. 인증완료 화면의 기간 필터
+          schema: { type: string, format: date }
+        - name: approved_to
+          in: query
+          schema: { type: string, format: date }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            default: release_date:desc
+            enum: [release_date:desc, release_date:asc, created_at:desc, pop_talk_score:desc]
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    required: [items, summary]
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Movie' }
+                      summary:
+                        $ref: '#/components/schemas/MovieSummary'
+              example:
+                page: 1
+                size: 10
+                total: 5985
+                total_pages: 599
+                items:
+                  - id: 1
+                    kofic_movie_cd: '20254904'
+                    kmdb_id: K41667
+                    kmdb_matched: true
+                    title_ko: 가능한 사랑
+                    title_en: Possible Love
+                    release_date: '2025-09-23'
+                    production_year: 2025
+                    runtime_minutes: 164
+                    production_status: 개봉예정
+                    production_countries: [한국]
+                    representative_country: 한국
+                    genres: [드라마]
+                    directors: [이창동]
+                    actors: [전도연, 설경구, 조인성, 조여정]
+                    viewing_grade: 청소년관람불가
+                    poster_url: 'http://file.koreafilm.or.kr/thm/02/99/19/51/tn_DPK026223.jpg'
+                    service_status: PUBLISHED
+                    approval_status: APPROVED
+                    approved_by: initial-dataset
+                    approved_at: '2026-08-07 10:46:13'
+                    source_system: KOFIC_KMDB
+                    source_hash: 9f2c1a7e4b83d05c6e1f8a37b2d94c05e7a13f6b8c2d94e05a7f1c3b6d82e940
+                    source_synced_at: '2026-08-07 10:46:13'
+                    created_at: '2026-08-07 10:46:13'
+                    updated_at: '2026-08-07 10:46:13'
+                    is_embedded: false
+                    media:
+                      - { type: POSTER, url: 'http://file.koreafilm.or.kr/thm/02/99/19/51/tn_DPK026223.jpg', order: 0, primary: true }
+                      - { type: STILL, url: 'http://file.koreafilm.or.kr/thm/01/copy/00/78/48/tn_DST953024.jpg', order: 0, primary: false }
+                    pop_talk_score: null
+                    categories: []
+                summary: { total: 5985, published: 5985, pending: 0, approved: 5985, rejected: 0 }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /movies/{movieId}:
+    parameters:
+      - { $ref: '#/components/parameters/MovieId' }
+    get:
+      operationId: getMovies
+      tags: [movies]
+      summary: 영화 상세
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    patch:
+      operationId: updateMovies
+      tags: [movies]
+      summary: 영화 정보 수정
+      description: |
+        보낸 필드만 바뀝니다. 변경 사실은 `VerificationLog`에 `EDIT`으로 남습니다.
+        `note`는 로그에 남길 사유이고 영화 데이터에는 저장되지 않습니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              minProperties: 1
+              properties:
+                pop_talk_score: { type: number, minimum: 0, maximum: 100 }
+                plot: { type: string }
+                category_ids:
+                  type: array
+                  items: { type: integer, format: int64 }
+                note: { type: string, description: 검증 로그에 남길 사유 }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieDetail' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /movies/{movieId}/approval:
+    parameters:
+      - { $ref: '#/components/parameters/MovieId' }
+    put:
+      operationId: setMoviesApproval
+      tags: [movies]
+      summary: 인증 상태 변경 (인증 / 반려 / 재검토 복귀)
+      description: |
+        **인증(`APPROVED`)은 사용자 화면에 인증 뱃지를 다는 신호입니다.**
+        단순 내부 승인이 아니라 "관리자가 확인한 영화"라는 표시입니다.
+
+        **반려(`REJECTED`)에는 사유가 필수입니다.** DB에 CHECK 제약이 걸려 있어
+        사유 없이 보내면 400입니다.
+
+        ```sql
+        CONSTRAINT ck_popcorn_movies_rejection CHECK (
+          approval_status <> 'REJECTED'
+          OR (rejection_reason IS NOT NULL AND btrim(rejection_reason) <> '')
+        )
+        ```
+
+        **반려는 노출도 함께 중단합니다**(`service_status = HIDDEN`).
+        서비스에서 내리는 조치이기 때문입니다.
+        인증·재검토 복귀는 `service_status`를 건드리지 않습니다 — 두 축은 별개입니다.
+
+        `approved_by`는 서버가 토큰에서 읽어 채웁니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/MovieApprovalStatus' }
+                reason:
+                  type: string
+                  minLength: 1
+                  description: '`status=REJECTED`일 때 필수'
+            examples:
+              승인:
+                value: { status: APPROVED }
+              반려:
+                value: { status: REJECTED, reason: 저작권 확인 필요 }
+              재검토복귀:
+                value: { status: PENDING }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieDetail' }
+        '400':
+          description: 반려 사유 누락 등
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              example:
+                type: 'https://api.poptalk.kr/problems/validation-error'
+                title: 반려 사유가 필요합니다
+                status: 400
+                detail: status가 REJECTED이면 reason은 비워둘 수 없습니다.
+        '404': { $ref: '#/components/responses/NotFound' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /movies/{movieId}/service-status:
+    parameters:
+      - { $ref: '#/components/parameters/MovieId' }
+    put:
+      operationId: setMoviesServiceStatus
+      tags: [movies]
+      summary: 노출 상태 변경 (⚠️ 이번 개발 범위 아님)
+      description: |
+        **이번 개발 범위가 아닙니다.** admin 목록에서 노출을 켜고 끄는 길은
+        제거했고, 상태 표시만 남겼습니다. 설계는 그대로 둡니다.
+
+        **인증 상태와 무관하게 바꿀 수 있습니다.** 수집된 영화면 인증대기든
+        인증완료든 노출을 켜고 끌 수 있습니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/MovieServiceStatus' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieDetail' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /movies/{movieId}/embedding:
+    parameters:
+      - { $ref: '#/components/parameters/MovieId' }
+    post:
+      operationId: createMoviesEmbedding
+      tags: [movies]
+      summary: 추천 임베딩 재생성 요청
+      description: |
+        `movie_embedding_jobs`에 `UPSERT` 작업을 넣습니다.
+        이미 대기·처리 중인 작업이 있으면 새로 만들지 않고 그것을 반환합니다
+        (`uq_movie_embedding_jobs_active` 유니크 인덱스).
+
+        **임베딩은 `service_status=PUBLISHED`이고 `approval_status=APPROVED`일 때만
+        생성됩니다.** 다른 상태면 기존 임베딩을 `STALE`로 바꾸고 큐에 넣지 않습니다.
+      responses:
+        '202':
+          description: 큐에 등록됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EmbeddingJob' }
+        '409':
+          description: 노출·인증 상태가 임베딩 조건에 맞지 않음
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  # ────────────────────────────────────────────────────────────────
+  # 카테고리
+  # ────────────────────────────────────────────────────────────────
+  /movie-categories:
+    get:
+      operationId: listMovieCategories
+      tags: [movie-categories]
+      summary: 영화 카테고리 목록
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: type
+          in: query
+          schema: { $ref: '#/components/schemas/MovieCategoryType' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/MovieCategory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createMovieCategories
+      tags: [movie-categories]
+      summary: 카테고리 추가
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MovieCategoryInput' }
+      responses:
+        '201':
+          description: 생성됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieCategory' }
+        '409':
+          description: code 중복
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /movie-categories/{categoryId}:
+    parameters:
+      - { $ref: '#/components/parameters/CategoryId' }
+    patch:
+      operationId: updateMovieCategories
+      tags: [movie-categories]
+      summary: 카테고리 수정
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/MovieCategoryInput'
+                - type: object
+                  minProperties: 1
+                  properties:
+                    is_active: { type: boolean }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MovieCategory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      operationId: deleteMovieCategories
+      tags: [movie-categories]
+      summary: 카테고리 삭제
+      description: 영화에 연결된 카테고리는 지울 수 없습니다.
+      responses:
+        '204': { description: 삭제됨 }
+        '409':
+          description: 연결된 영화가 있음
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /display-categories:
+    get:
+      operationId: listDisplayCategories
+      tags: [display-categories]
+      summary: 화면 문구 목록
+      description: 사용자 화면에 노출되는 추천 알약 문구입니다.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: is_active
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/DisplayCategory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createDisplayCategories
+      tags: [display-categories]
+      summary: 화면 문구 추가
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DisplayCategoryInput' }
+      responses:
+        '201':
+          description: 생성됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DisplayCategory' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /display-categories/{categoryId}:
+    parameters:
+      - { $ref: '#/components/parameters/CategoryId' }
+    patch:
+      operationId: updateDisplayCategories
+      tags: [display-categories]
+      summary: 화면 문구 수정
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/DisplayCategoryInput'
+                - type: object
+                  minProperties: 1
+                  properties:
+                    is_active: { type: boolean }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DisplayCategory' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    delete:
+      operationId: deleteDisplayCategories
+      tags: [display-categories]
+      summary: 화면 문구 삭제
+      responses:
+        '204': { description: 삭제됨 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  # ────────────────────────────────────────────────────────────────
+  # 감상평
+  # ────────────────────────────────────────────────────────────────
+  /reviews:
+    get:
+      operationId: listReviews
+      tags: [reviews]
+      summary: 감상평 목록
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/ReviewStatus' }
+        - name: member_id
+          in: query
+          description: 회원 상세의 감상평 탭이 사용
+          schema: { type: integer, format: int64 }
+        - name: q
+          in: query
+          description: 작성자·영화·내용 부분 일치
+          schema: { type: string }
+        - name: created_from
+          in: query
+          schema: { type: string, format: date }
+        - name: created_to
+          in: query
+          schema: { type: string, format: date }
+        - name: sort
+          in: query
+          schema: { type: string, default: created_at:desc }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Review' }
+                      summary:
+                        $ref: '#/components/schemas/ReviewSummary'
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /reviews/{reviewId}/status:
+    parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      operationId: setReviewsStatus
+      tags: [reviews]
+      summary: 감상평 상태 변경 (정상 / 숨김 / 삭제)
+      description: |
+        `DELETED`는 물리 삭제가 아니라 상태 변경입니다.
+        처리 이력을 남겨야 하므로 행을 지우지 않습니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/ReviewStatus' }
+                reason: { type: string, description: 숨김·삭제 사유 }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Review' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  # ────────────────────────────────────────────────────────────────
+  # 회원
+  # ────────────────────────────────────────────────────────────────
+  /members:
+    get:
+      operationId: listMembers
+      tags: [members]
+      summary: 회원 목록
+      description: |
+        **`dev.users`를 읽습니다.** 앱 사용자 전용 테이블이라 `role` 필터가
+        필요 없습니다. 관리자는 별도 테이블로 갈 예정입니다.
+
+        `id`는 **uuid**입니다. 정수가 아닙니다.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/MemberStatus' }
+        - name: q
+          in: query
+          description: 이름·이메일 부분 일치
+          schema: { type: string }
+        - name: joined_from
+          in: query
+          schema: { type: string, format: date }
+        - name: joined_to
+          in: query
+          schema: { type: string, format: date }
+        - name: sort
+          in: query
+          schema: { type: string, default: joined_at:desc }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Member' }
+                      summary:
+                        $ref: '#/components/schemas/MemberSummary'
+              example:
+                page: 1
+                size: 10
+                total: 12
+                total_pages: 2
+                items:
+                  - id: 11111111-0000-4000-8000-000000000001
+                    nickname: 팝콘러버
+                    email: popcorn.lover@gmail.com
+                    status: ACTIVE
+                    joined_at: '2026-01-12'
+                    review_count: 23
+                    avg_rating: 4.5
+                    has_survey: true
+                summary: { total: 12, active: 9, suspended: 2, withdrawn: 1 }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /members/{memberId}:
+    parameters:
+      - { $ref: '#/components/parameters/MemberId' }
+    get:
+      operationId: getMembers
+      tags: [members]
+      summary: 회원 상세 (계정 탭)
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /members/{memberId}/status:
+    parameters:
+      - { $ref: '#/components/parameters/MemberId' }
+    put:
+      operationId: setMembersStatus
+      tags: [members]
+      summary: 회원 상태 변경 (이용 정지 / 정지 해제) (⚠️ 이번 개발 범위 아님)
+      description: |
+        **이번 개발 범위가 아닙니다.** admin 회원 목록에서 상태를 바꾸는 길은 제거했고,
+        조회만 남겼습니다. 설계는 그대로 둡니다.
+
+        정지에는 사유가 필수입니다. `status_updated_by`는 서버가 채웁니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/MemberStatus' }
+                reason:
+                  type: string
+                  description: '`status=SUSPENDED`일 때 필수'
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /members/{memberId}/survey:
+    parameters:
+      - { $ref: '#/components/parameters/MemberId' }
+    get:
+      operationId: listMembersSurvey
+      tags: [members]
+      summary: 가입 시 취향 설문 (취향 설문 탭)
+      description: |
+        Q1~Q3은 필수, Q4~Q6은 건너뛸 수 있습니다.
+        건너뛴 회원은 인기작 기반 콜드스타트 대상입니다.
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberSurvey' }
+        '404':
+          description: 설문 미응답
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /members/{memberId}/preference-updates:
+    parameters:
+      - { $ref: '#/components/parameters/MemberId' }
+    get:
+      operationId: listMembersPreferenceUpdates
+      tags: [members]
+      summary: 취향 갱신 이력 (취향 갱신 탭) (⚠️ 이번 개발 범위 아님)
+      description: |
+        **일정상 이번 개발 범위에서 빠졌습니다.** 근거가 되는 취향 갱신 배치
+        (`refresh-member-preferences`)를 만들지 않기로 해서, 내려줄 데이터가 없습니다.
+        admin 화면의 "취향 갱신" 탭도 함께 제거했습니다.
+
+        설계는 그대로 두었으니 되살릴 때 다시 만들 필요가 없습니다.
+        매일 03:00 배치가 전날 감상평을 근거로 취향을 갱신한 이력입니다.
+        관리자가 "무엇을 근거로 취향이 바뀌었는지" 추적할 수 있어야 하므로
+        근거 감상평(영화·팝콘점수·본문)을 함께 내려줍니다.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/PreferenceUpdate' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  # ────────────────────────────────────────────────────────────────
+  # 관리자
+  # ────────────────────────────────────────────────────────────────
+  /admins:
+    get:
+      operationId: listAdmins
+      tags: [admins]
+      summary: 관리자 목록
+      description: |
+        **`dev.admins_service` 뷰를 읽으세요.** `dev.users`에서 `role <> 'MEMBER'`인
+        행만 봅니다. 뷰가 이 관리자가 처리한 영화 건수(`approved_count`)도 붙여줍니다.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/AdminStatus' }
+        - name: q
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/Admin' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createAdmins
+      tags: [admins]
+      summary: 관리자 추가
+      description: '`SUPER_ADMIN`만 호출할 수 있습니다.'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AdminInput' }
+      responses:
+        '201':
+          description: 생성됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Admin' }
+        '409':
+          description: 이메일 중복
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admins/{adminId}:
+    parameters:
+      - name: adminId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    patch:
+      operationId: updateAdmins
+      tags: [admins]
+      summary: 관리자 정보 수정
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              allOf:
+                - $ref: '#/components/schemas/AdminInput'
+                - type: object
+                  minProperties: 1
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Admin' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /admins/{adminId}/status:
+    parameters:
+      - name: adminId
+        in: path
+        required: true
+        schema: { type: integer, format: int64 }
+    put:
+      operationId: setAdminsStatus
+      tags: [admins]
+      summary: 관리자 계정 정지 / 활성화
+      description: 자기 자신은 정지할 수 없습니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [status]
+              properties:
+                status: { $ref: '#/components/schemas/AdminStatus' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Admin' }
+        '403':
+          description: 권한 없음 또는 자기 자신 정지 시도
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+  /admins/me:
+    get:
+      operationId: listAdminsMe
+      tags: [admins]
+      summary: 로그인한 관리자 정보
+      description: GNB 우측의 계정 영역이 사용합니다.
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Admin' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  # ────────────────────────────────────────────────────────────────
+  # 푸시
+  # ────────────────────────────────────────────────────────────────
+  /push-messages:
+    get:
+      operationId: listPushMessages
+      tags: [push]
+      summary: 푸시 목록
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/PushStatus' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/PushMessage' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      operationId: createPushMessages
+      tags: [push]
+      summary: 푸시 작성 (임시저장 / 예약 / 즉시 발송)
+      description: |
+        `action`이 무엇을 할지 정합니다.
+
+        | action | 결과 상태 | 비고 |
+        |---|---|---|
+        | `DRAFT` | `DRAFT` | 저장만 |
+        | `SCHEDULE` | `SCHEDULED` | `scheduled_at` 필수 |
+        | `SEND` | `SENT` | 즉시 발송 |
+
+        `target=MEMBER`면 `member_ids`가 1개 이상 필요합니다.
+        화면에서는 직접 입력과 CSV 업로드 둘 다 받아 중복을 제거한 뒤 보냅니다.
+        **CSV 파싱은 클라이언트가 합니다** — 서버는 아이디 배열만 받습니다.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushMessageInput' }
+            examples:
+              전체발송:
+                value:
+                  title: 신규 인증 영화 알림
+                  body: 이번 주 새로 인증된 영화 3편을 확인해보세요!
+                  target: ALL
+                  action: SEND
+              특정회원예약:
+                value:
+                  title: 감상평 이벤트 안내
+                  body: 감상평을 남기면 추첨을 통해 선물을 드립니다!
+                  target: MEMBER
+                  member_ids: [1001, 1002, 1003]
+                  action: SCHEDULE
+                  scheduled_at: '2026-08-09 09:00:00'
+      responses:
+        '201':
+          description: 생성됨
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/PushMessage' }
+        '400':
+          description: 대상 0명, 예약 시각 누락 등
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  # ────────────────────────────────────────────────────────────────
+  # 로그 · 배치 · 대시보드
+  # ────────────────────────────────────────────────────────────────
+  /verification-logs:
+    get:
+      operationId: listVerificationLogs
+      tags: [logs]
+      summary: 검증 로그
+      description: 영화 인증 상태 변경과 정보 수정 이력입니다.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: action
+          in: query
+          schema: { $ref: '#/components/schemas/LogAction' }
+        - name: admin
+          in: query
+          description: 처리한 관리자 이름
+          schema: { type: string }
+        - name: q
+          in: query
+          description: 영화 제목 부분 일치
+          schema: { type: string }
+        - name: created_from
+          in: query
+          schema: { type: string, format: date }
+        - name: created_to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/VerificationLog' }
+                      summary:
+                        type: object
+                        additionalProperties: { type: integer }
+                        description: 액션별 건수
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /batch-runs:
+    get:
+      operationId: listBatchRuns
+      tags: [batches]
+      summary: 배치 실행 이력
+      description: |
+        대시보드의 "배치 실행 현황" 패널이 사용합니다.
+        `job_name`으로 배치 종류를 구분합니다. 스케줄러는 APScheduler입니다.
+
+        | job_name | 시각 | 하는 일 |
+        |---|---|---|
+        | `load-initial-movies` | 02:00 | KOFIC·KMDB 영화 원장 수집 |
+
+        취향 갱신 배치(`refresh-member-preferences`)는 일정상 이번 범위에서 빠졌습니다.
+      parameters:
+        - { $ref: '#/components/parameters/Page' }
+        - { $ref: '#/components/parameters/Size' }
+        - name: job_name
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/JobStatus' }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PageMeta'
+                  - type: object
+                    properties:
+                      items:
+                        type: array
+                        items: { $ref: '#/components/schemas/BatchRun' }
+              example:
+                page: 1
+                size: 10
+                total: 1
+                total_pages: 1
+                items:
+                  - id: 1
+                    job_name: load-initial-movies
+                    scheduled_for: '2026-08-07 10:46:13'
+                    status: SUCCEEDED
+                    source_file: /mnt/popcorn/initial-movies.json
+                    processed_count: 5985
+                    inserted_count: 5985
+                    updated_count: 0
+                    failed_count: 0
+                    result: {}
+                    started_at: '2026-08-07 10:46:13'
+                    finished_at: '2026-08-07 10:52:40'
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /dashboard/summary:
+    get:
+      operationId: listDashboardSummary
+      tags: [dashboard]
+      summary: 대시보드 집계
+      description: |
+        대시보드가 요약 카드 11장을 그리는 데 필요한 수치를 한 번에 내려줍니다.
+        화면마다 목록 API를 여러 번 부르지 않게 하려는 것입니다.
+
+        GNB의 "마지막 데이터 수집"도 여기 `last_synced_at`을 씁니다.
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DashboardSummary' }
+
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /health:
+    get:
+      tags: [ops]
+      summary: 헬스체크
+      operationId: health
+      security: []
+      description: |
+        서버와 DB가 살아 있는지 알려줍니다. **인증이 없습니다** — 로드밸런서는
+        토큰을 갖고 있지 않습니다.
+
+        DB에 `SELECT 1`을 날려 결과를 담습니다.
+
+        | status | database | 뜻 |
+        |---|---|---|
+        | `ok` | `connected` | 정상 |
+        | `degraded` | `unreachable` | 프로세스는 살아 있지만 DB에 못 붙음 |
+
+        **응답에 내부 정보를 담지 않습니다.** 접속 문자열이나 예외 메시지를 그대로
+        넣으면 정보 노출입니다. `database`는 두 값만 내려줍니다.
+
+        `servers`의 basePath가 붙지 않는 최상위 경로입니다 — 실제 주소는 `/health`입니다.
+
+        > ⚠️ **DB가 끊겨도 200을 냅니다.**
+        > 로드밸런서 헬스체크로 쓰려면 상태 코드로 판단해야 하는데, 지금은
+        > `status` 값을 봐야 합니다. LB에 붙이기 전에 503을 내리도록 고쳐야 합니다.
+        > admin은 본문의 `status`를 읽습니다.
+      responses:
+        '200':
+          description: 응답함. DB 상태는 본문의 `status`로 판단합니다
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Health' }
+              examples:
+                정상:
+                  value:
+                    status: ok
+                    database: connected
+                    timestamp: '2026-08-11T07:20:31.412Z'
+                DB 끊김:
+                  value:
+                    status: degraded
+                    database: unreachable
+                    timestamp: '2026-08-11T07:20:31.412Z'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      description: 1부터 시작
+      schema: { type: integer, minimum: 1, default: 1 }
+    Size:
+      name: size
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 10 }
+    MovieId:
+      name: movieId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+    CategoryId:
+      name: categoryId
+      in: path
+      required: true
+      schema: { type: integer, format: int64 }
+
+  responses:
+    BadRequest:
+      description: 요청이 올바르지 않음
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Unauthorized:
+      description: 인증 필요
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    Forbidden:
+      description: 권한 없음
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+    NotFound:
+      description: 대상을 찾을 수 없음
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+    '401': { $ref: '#/components/responses/Unauthorized' }
+    '403': { $ref: '#/components/responses/Forbidden' }
+  schemas:
+    Health:
+      type: object
+      required: [status, database, timestamp]
+      description: '`apps/api`의 `GET /health` 응답. 구현을 그대로 따릅니다.'
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded]
+          description: 이 서버가 정상인지. DB에 못 붙으면 `degraded`
+        database:
+          type: string
+          enum: [connected, unreachable]
+          description: PostgreSQL 연결 상태. 원인 메시지는 담지 않습니다
+        timestamp:
+          type: string
+          format: date-time
+          description: 점검한 시각 (ISO 8601)
+          example: '2026-08-11T07:20:31.412Z'
+
+    # ── 인증 ──────────────────────────────────────────────
+    LoginResult:
+      type: object
+      required: [access_token, token_type, expires_in, admin]
+      properties:
+        access_token:
+          type: string
+          description: '`Authorization: Bearer <값>`으로 보냅니다. 메모리에만 두세요'
+        token_type: { type: string, const: Bearer }
+        expires_in: { type: integer, description: 초. 900 = 15분 }
+        admin: { $ref: '#/components/schemas/Admin' }
+
+    # ── 공통 ──────────────────────────────────────────────
+    PageMeta:
+      type: object
+      required: [page, size, total, total_pages]
+      properties:
+        page: { type: integer, example: 1 }
+        size: { type: integer, example: 10 }
+        total: { type: integer, example: 5985 }
+        total_pages: { type: integer, example: 599 }
+
+    Problem:
+      type: object
+      description: RFC 9457
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string, format: uri }
+        errors:
+          type: array
+          description: 필드 단위 검증 실패
+          items:
+            type: object
+            properties:
+              field: { type: string }
+              message: { type: string }
+
+    # ── enum (dev 스키마와 1:1) ─────────────────────────────
+    MovieApprovalStatus:
+      type: string
+      enum: [PENDING, APPROVED, REJECTED]
+      description: 인증대기 · 인증완료 · 반려
+    MovieServiceStatus:
+      type: string
+      enum: [DRAFT, PUBLISHED, HIDDEN]
+      description: 준비중 · 노출중 · 숨김
+    JobStatus:
+      type: string
+      enum: [PENDING, PROCESSING, SUCCEEDED, FAILED]
+    EmbeddingStatus:
+      type: string
+      enum: [PENDING, PROCESSING, READY, FAILED, STALE]
+      description: '`STALE`은 원문이 바뀌어 재생성이 필요한 상태'
+    MovieMediaType:
+      type: string
+      enum: [POSTER, STILL]
+    LogAction:
+      type: string
+      enum: [APPROVE, REJECT, RESTORE, EDIT]
+    ReviewStatus:
+      type: string
+      enum: [NORMAL, HIDDEN, DELETED]
+    MemberStatus:
+      type: string
+      enum: [ACTIVE, SUSPENDED, WITHDRAWN]
+    AdminStatus:
+      type: string
+      enum: [ACTIVE, SUSPENDED]
+    AdminRole:
+      type: string
+      enum: [ADMIN, SUPER_ADMIN]
+      description: |
+        관리자 권한입니다. `SUPER_ADMIN`만 관리자를 추가·정지할 수 있습니다.
+
+        **관리자 테이블은 아직 없습니다.** `dev.users`는 앱 사용자 전용이고
+        `role` 컬럼이 없습니다. 관리자용 테이블을 새로 만들어야 합니다.
+    PushStatus:
+      type: string
+      enum: [SENT, SCHEDULED, DRAFT]
+    PushTarget:
+      type: string
+      enum: [ALL, MEMBER]
+    MovieCategoryType:
+      type: string
+      enum: [GENRE, MOOD, THEME, RATING]
+    PreferenceChangeType:
+      type: string
+      enum: [ADD, STRENGTHEN, WEAKEN, REMOVE]
+
+    # ── 영화 ──────────────────────────────────────────────
+    Movie:
+      type: object
+      description: '`dev.popcorn_movies_service` 뷰의 한 행'
+      required:
+        [id, kofic_movie_cd, kmdb_matched, title_ko, release_date,
+         genres, directors, actors, service_status, approval_status]
+      properties:
+        id: { type: integer, format: int64 }
+        kofic_movie_cd:
+          type: string
+          description: KOFIC 영화 코드. 필수·유니크한 원천 키
+        kmdb_id: { type: [string, 'null'] }
+        kmdb_matched:
+          type: boolean
+          description: false면 포스터·줄거리가 비어 있을 가능성이 높음 (실 데이터의 6%)
+        title_ko: { type: string }
+        title_en: { type: [string, 'null'] }
+        title_original: { type: [string, 'null'] }
+        release_date: { type: string, format: date }
+        production_year: { type: [integer, 'null'] }
+        runtime_minutes: { type: [integer, 'null'] }
+        movie_type: { type: [string, 'null'] }
+        production_status:
+          type: [string, 'null']
+          description: '개봉 · 개봉예정'
+        production_countries: { type: array, items: { type: string } }
+        representative_country: { type: [string, 'null'] }
+        genres: { type: array, items: { type: string } }
+        representative_genre: { type: [string, 'null'] }
+        directors: { type: array, items: { type: string } }
+        director_names_en: { type: array, items: { type: string } }
+        actors: { type: array, items: { type: string } }
+        actor_roles: { type: array, items: { type: string } }
+        production_companies: { type: array, items: { type: string } }
+        viewing_grade:
+          type: [string, 'null']
+          description: KOFIC 원문 그대로. 목록에서는 축약해 보여줌
+        poster_url:
+          type: [string, 'null']
+          description: 비어 있으면 `media`의 대표 포스터를 씀 (그런 영화가 35편)
+        plot: { type: [string, 'null'] }
+        source_keywords: { type: array, items: { type: string } }
+        service_status: { $ref: '#/components/schemas/MovieServiceStatus' }
+        approval_status: { $ref: '#/components/schemas/MovieApprovalStatus' }
+        approved_by: { type: [string, 'null'] }
+        approved_at: { type: [string, 'null'], example: '2026-08-05 14:20:33' }
+        rejection_reason:
+          type: [string, 'null']
+          description: '`approval_status=REJECTED`면 비어 있을 수 없음'
+        source_system: { type: string, example: KOFIC_KMDB }
+        source_hash:
+          type: string
+          description: 원본 행 변경 감지를 위한 SHA-256. 배치가 채우며 admin은 읽기만 합니다
+        source_synced_at: { type: string, example: '2026-08-07 10:46:13' }
+        created_at: { type: string }
+        updated_at: { type: string }
+        is_embedded:
+          type: boolean
+          description: |
+            뷰가 계산합니다. `PROFILE` 임베딩이 `READY`이고 벡터가 실제로 있는지.
+
+            **생성은 CLOVA Studio Embedding v2가 하는데 `embedding_model` 컬럼에는
+            `bge-m3`가 기록됩니다.** 배치 코드(`embedding/worker.py`)가 그렇게 넣고,
+            뷰도 `embedding_model = 'bge-m3'`로 거릅니다. 이름과 실제가 다르니
+            모델을 바꿀 때 이 값도 함께 봐야 합니다.
+        media:
+          type: array
+          description: 포스터·스틸 전부. 영화당 평균 8.3개, 최대 53개
+          items: { $ref: '#/components/schemas/MovieMediaEntry' }
+        pop_talk_score:
+          type: [number, 'null']
+          description: '**DB에 아직 없는 컬럼.** 추가 예정'
+        categories:
+          type: array
+          description: '**DB에 아직 테이블이 없음.** 추가 예정'
+          items: { type: string }
+
+    MovieMediaEntry:
+      type: object
+      required: [type, url, order, primary]
+      properties:
+        type: { $ref: '#/components/schemas/MovieMediaType' }
+        url: { type: string, format: uri }
+        order: { type: integer }
+        primary: { type: boolean }
+
+    MovieDetail:
+      allOf:
+        - $ref: '#/components/schemas/Movie'
+        - type: object
+          properties:
+            embedding:
+              oneOf:
+                - $ref: '#/components/schemas/MovieEmbedding'
+                - type: 'null'
+            logs:
+              type: array
+              description: 이 영화의 검증 이력
+              items: { $ref: '#/components/schemas/VerificationLog' }
+
+    MovieEmbedding:
+      type: object
+      required: [id, movie_id, document_type, embedding_model, status, attempts]
+      properties:
+        id: { type: integer, format: int64 }
+        movie_id: { type: integer, format: int64 }
+        document_type: { type: string, example: PROFILE }
+        chunk_no: { type: integer }
+        embedding_model:
+          type: string
+          example: bge-m3
+          description: 저장되는 이름. 실제 생성은 CLOVA Studio Embedding v2입니다
+        status: { $ref: '#/components/schemas/EmbeddingStatus' }
+        content_hash: { type: string }
+        attempts: { type: integer }
+        last_error: { type: [string, 'null'] }
+        embedded_at: { type: [string, 'null'] }
+        updated_at: { type: string }
+
+    EmbeddingJob:
+      type: object
+      required: [id, movie_id, embedding_model, operation, status, attempts, max_attempts]
+      properties:
+        id: { type: integer, format: int64 }
+        movie_id: { type: integer, format: int64 }
+        embedding_model:
+          type: string
+          example: bge-m3
+          description: 저장되는 이름. 실제 생성은 CLOVA Studio Embedding v2입니다
+        operation: { type: string, enum: [UPSERT, DELETE] }
+        status: { $ref: '#/components/schemas/JobStatus' }
+        attempts: { type: integer }
+        max_attempts: { type: integer, example: 3 }
+        last_error: { type: [string, 'null'] }
+        available_at: { type: string }
+
+    MovieSummary:
+      type: object
+      required: [total, published, pending, approved, rejected]
+      description: 서비스 영화 화면의 요약 카드 4장
+      properties:
+        total: { type: integer }
+        published: { type: integer, description: 노출 중 }
+        pending: { type: integer }
+        approved: { type: integer }
+        rejected: { type: integer }
+
+    # ── 카테고리 ──────────────────────────────────────────
+    MovieCategory:
+      type: object
+      description: |
+        `dev.movie_categories` — 관리자용 내부 분류입니다.
+        **영화와 잇는 연결 테이블이 없어 `movie_count`가 없습니다.**
+        영화가 붙는 대상은 `DisplayCategory`입니다.
+      required: [id, code, name, type, sort_order, is_active, created_by, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string, example: KOREAN_OCCULT }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/MovieCategoryType' }
+        description: { type: string }
+        sort_order: { type: integer }
+        is_active: { type: boolean }
+        created_by: { type: string }
+        created_at: { type: string }
+        updated_by: { type: [string, 'null'] }
+        updated_at: { type: [string, 'null'] }
+
+    MovieCategoryInput:
+      type: object
+      required: [code, name, type]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        type: { $ref: '#/components/schemas/MovieCategoryType' }
+        description: { type: string }
+        sort_order: { type: integer }
+
+    DisplayCategory:
+      type: object
+      required: [id, code, name, axis, movie_count, sort_order, is_active, created_by, created_at]
+      description: |
+        `dev.display_categories` — 사용자 화면에 노출되는 추천 알약 문구입니다.
+        **영화가 실제로 붙는 대상입니다** (`movie_display_category_links`).
+        `movie_count`는 `dev.display_categories_service` 뷰가 붙여줍니다.
+      properties:
+        id: { type: integer, format: int64 }
+        code: { type: string }
+        name: { type: string, description: 알약에 그대로 노출되는 문구 }
+        axis:
+          type: string
+          enum: [SITUATION, TASTE]
+          description: 관람 상황 축 · 취향 소재 축
+        description: { type: string }
+        movie_count: { type: integer, description: '이 문구에 붙은 영화 수. 뷰가 집계' }
+        sort_order: { type: integer }
+        is_active: { type: boolean }
+        created_by: { type: string }
+        created_at: { type: string }
+        updated_by: { type: [string, 'null'] }
+        updated_at: { type: [string, 'null'] }
+
+    DisplayCategoryInput:
+      type: object
+      required: [code, name, axis]
+      properties:
+        code: { type: string }
+        name: { type: string }
+        axis: { type: string, enum: [SITUATION, TASTE] }
+        description: { type: string }
+        sort_order: { type: integer }
+
+    # ── 감상평 ────────────────────────────────────────────
+    Review:
+      type: object
+      required: [id, member_id, author, movie_id, movie, rating, content, status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        member_id: { type: string, format: uuid }
+        author: { type: string, description: 회원 닉네임 }
+        source_system:
+          type: [string, 'null']
+          example: naver_movie
+          description: |
+            감상평의 출처. `dev.reviews.source_system`입니다.
+
+            **회원이 앱에서 직접 쓴 감상평은 `null`입니다.** 마이그레이션 008이
+            `source_system`·`source_user_key`·`source_review_key` 셋을 CHECK로
+            묶어 두어, 전부 차 있거나 전부 비어 있거나 둘 중 하나입니다.
+
+            수집분과 회원 감상평이 실제로 섞여 있으므로 `null`을 특정 출처로
+            메우지 마세요. admin은 이 값으로 목록의 "출처" 열을 가릅니다 —
+            `naver_movie`는 "네이버 영화", `null`은 "팝콘톡"으로 보입니다.
+        movie_id: { type: integer, format: int64 }
+        movie: { type: string, description: 영화 제목 }
+        rating:
+          type: number
+          minimum: 0.5
+          maximum: 5.0
+          multipleOf: 0.5
+          example: 4.5
+          description: |
+            팝콘점수. `dev.reviews.rating`이 `numeric(2,1)`이고
+            `CHECK (rating >= 0.5 AND rating <= 5.0)`으로 막습니다.
+            admin은 아이콘 5개로 그립니다 — 0.5는 반쪽으로 보입니다.
+        content: { type: string }
+        status: { $ref: '#/components/schemas/ReviewStatus' }
+        created_at: { type: string, format: date }
+
+    ReviewSummary:
+      type: object
+      required: [total, hidden]
+      properties:
+        total: { type: integer }
+        hidden: { type: integer }
+
+    # ── 회원 ──────────────────────────────────────────────
+    Member:
+      type: object
+      required: [id, nickname, email, status, joined_at, review_count, has_survey]
+      description: |
+        `dev.users` — 앱 사용자 테이블입니다. `id`는 **uuid**입니다.
+
+        실제 컬럼은 `email`·`nickname`·`profile_image_url`·`status`·
+        `onboarding_status`·`last_login_at`·`deleted_at`입니다.
+        아래 집계 필드(감상평 수·평균 점수 등)는 API가 조인해 만들어야 합니다.
+      properties:
+        id: { type: string, format: uuid }
+        nickname: { type: string }
+        email: { type: string, format: email }
+        status: { $ref: '#/components/schemas/MemberStatus' }
+        joined_at: { type: string, format: date }
+        status_updated_by: { type: [string, 'null'] }
+        status_updated_at: { type: [string, 'null'] }
+        status_reason: { type: [string, 'null'] }
+        review_count: { type: integer, description: 뷰가 집계 }
+        avg_rating: { type: [number, 'null'] }
+        has_survey: { type: boolean }
+
+    MemberSummary:
+      type: object
+      required: [total, active, suspended, withdrawn]
+      properties:
+        total: { type: integer }
+        active: { type: integer }
+        suspended: { type: integer }
+        withdrawn: { type: integer }
+
+    MemberSurvey:
+      type: object
+      required: [member_id, genres, favorite_movies, watch_with, rating_limit, skipped_optional, answered_at]
+      description: 기획 문서 "온보딩 설문 & 추천 카테고리 설계" 기준
+      properties:
+        member_id: { type: integer, format: int64 }
+        genres:
+          type: array
+          description: Q1 좋아하는 장르 (필수, 복수)
+          items: { type: string }
+        favorite_movies:
+          type: array
+          description: Q2 인상 깊게 본 영화 (필수, 1~3편)
+          items: { type: string }
+        watch_with:
+          type: array
+          description: Q3 관람 상황 (필수, 복수)
+          items: { type: string }
+        rating_limit:
+          type: string
+          description: Q3 관람 등급 (필수, 단일)
+        people:
+          type: array
+          description: Q4 좋아하는 배우·감독 (선택)
+          items: { type: string }
+        topics:
+          type: array
+          description: Q5 관심 소재 (선택, 복수)
+          items: { type: string }
+        avoid:
+          type: array
+          description: Q6 피하고 싶은 요소 (선택, 복수)
+          items: { type: string }
+        skipped_optional:
+          type: boolean
+          description: true면 콜드스타트 대상
+        answered_at: { type: string }
+
+    PreferenceUpdate:
+      type: object
+      required: [id, member_id, batch_at, source, changes]
+      properties:
+        id: { type: integer, format: int64 }
+        member_id: { type: string, format: uuid }
+        batch_at: { type: string }
+        source:
+          type: object
+          description: 갱신 근거가 된 감상평
+          properties:
+            review_id: { type: [integer, 'null'], format: int64 }
+            movie: { type: string }
+            score: { type: integer }
+            content: { type: string }
+        changes:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                description: '관심 소재 · 장르 · 선호 배우 · 관람 상황 · 피하고 싶은 요소'
+              type: { $ref: '#/components/schemas/PreferenceChangeType' }
+              value: { type: string }
+
+    # ── 관리자 ────────────────────────────────────────────
+    Admin:
+      type: object
+      required: [id, name, email, role, status, joined_at]
+      properties:
+        id: { type: integer, format: int64 }
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/AdminRole' }
+        status: { $ref: '#/components/schemas/AdminStatus' }
+        joined_at: { type: string }
+        last_login: { type: [string, 'null'] }
+        created_by: { type: [string, 'null'] }
+
+    AdminInput:
+      type: object
+      required: [name, email, role]
+      properties:
+        name: { type: string }
+        email: { type: string, format: email }
+        role: { $ref: '#/components/schemas/AdminRole' }
+
+    # ── 푸시 ──────────────────────────────────────────────
+    PushMessage:
+      type: object
+      required: [id, title, body, target, target_count, status, created_by, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        title: { type: string }
+        body: { type: string, maxLength: 100 }
+        target: { $ref: '#/components/schemas/PushTarget' }
+        target_count: { type: integer }
+        status: { $ref: '#/components/schemas/PushStatus' }
+        scheduled_at: { type: [string, 'null'] }
+        sent_at: { type: [string, 'null'] }
+        created_by: { type: string }
+        created_at: { type: string }
+
+    PushMessageInput:
+      type: object
+      required: [title, body, target, action]
+      properties:
+        title: { type: string, minLength: 1 }
+        body: { type: string, minLength: 1, maxLength: 100 }
+        target: { $ref: '#/components/schemas/PushTarget' }
+        member_ids:
+          type: array
+          description: '`target=MEMBER`일 때 1개 이상 필수. 중복은 클라이언트가 제거해 보냄'
+          items: { type: integer, format: int64 }
+        action:
+          type: string
+          enum: [DRAFT, SCHEDULE, SEND]
+        scheduled_at:
+          type: string
+          description: '`action=SCHEDULE`일 때 필수'
+
+    # ── 로그 · 배치 ───────────────────────────────────────
+    VerificationLog:
+      type: object
+      required: [id, movie_id, movie, admin, action, before, after, created_at]
+      properties:
+        id: { type: integer, format: int64 }
+        movie_id: { type: integer, format: int64 }
+        movie: { type: string }
+        admin: { type: string }
+        action: { $ref: '#/components/schemas/LogAction' }
+        before: { $ref: '#/components/schemas/MovieApprovalStatus' }
+        after: { $ref: '#/components/schemas/MovieApprovalStatus' }
+        note: { type: string }
+        created_at: { type: string }
+
+    BatchRun:
+      type: object
+      required: [id, job_name, scheduled_for, status, processed_count, inserted_count, updated_count, failed_count, result]
+      description: '`dev.batch_runs`'
+      properties:
+        id: { type: integer, format: int64 }
+        job_name:
+          type: string
+          description: '자유 문자열. `load-initial-movies` 등'
+        scheduled_for: { type: string }
+        status: { $ref: '#/components/schemas/JobStatus' }
+        source_hash:
+          type: string
+          description: 원본 파일 SHA-256. 같은 파일을 두 번 적재했는지 판별합니다
+        source_file: { type: [string, 'null'] }
+        processed_count: { type: integer }
+        inserted_count: { type: integer }
+        updated_count: { type: integer }
+        failed_count: { type: integer }
+        result: { type: object, additionalProperties: true }
+        last_error: { type: [string, 'null'] }
+        started_at: { type: [string, 'null'] }
+        finished_at: { type: [string, 'null'] }
+
+    # ── 대시보드 ──────────────────────────────────────────
+    DashboardSummary:
+      type: object
+      required: [last_synced_at, movies, members, reviews]
+      properties:
+        last_synced_at:
+          type: string
+          description: GNB의 "마지막 데이터 수집"
+        movies:
+          $ref: '#/components/schemas/MovieSummary'
+        members:
+          $ref: '#/components/schemas/MemberSummary'
+        reviews:
+          type: object
+          properties:
+            total: { type: integer }
+        recent_batch_runs:
+          type: array
+          maxItems: 5
+          items: { $ref: '#/components/schemas/BatchRun' }

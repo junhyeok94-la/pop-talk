@@ -1,0 +1,256 @@
+/* 목록 화면(ui.pageTight)과 같은 여백을 쓴다. 이 값이 없으면 내용이 화면 가장자리에 붙는다. */
+.wrapper {
+  composes: pageTight from "@/styles/ui.module.css";
+}
+
+.header {
+  display: flex;
+  gap: var(--seed-dimension-x3);
+  align-items: center;
+}
+
+.back {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--seed-radius-r2);
+  color: var(--seed-color-fg-neutral-muted);
+  transition: background-color 120ms ease;
+}
+
+.back:hover {
+  background: var(--seed-color-bg-layer-fill);
+}
+
+.headerTitle {
+  font-size: var(--seed-font-size-t6);
+  font-weight: var(--seed-font-weight-bold);
+}
+
+.headerRight {
+  margin-left: auto;
+}
+
+
+
+
+
+.block {
+  padding: var(--seed-dimension-x4);
+}
+
+.blockNote {
+  display: flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+  margin-top: var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t2);
+  line-height: 1.5;
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+/* ── 설문 ────────────────────────────────────────────── */
+
+.survey {
+  display: grid;
+  gap: var(--seed-dimension-x3);
+  margin-top: var(--seed-dimension-x3);
+}
+
+.surveyRow {
+  display: grid;
+  grid-template-columns: 11rem minmax(0, 1fr);
+  gap: var(--seed-dimension-x3);
+  align-items: baseline;
+  padding-bottom: var(--seed-dimension-x3);
+  border-bottom: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+.surveyRow:last-child {
+  padding-bottom: 0;
+  border-bottom: none;
+}
+
+@media (max-width: 720px) {
+  .surveyRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--seed-dimension-x2);
+  }
+}
+
+.surveyLabel {
+  display: flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+  font-size: var(--seed-font-size-t4);
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.qNo {
+  font-family: var(--font-inter), ui-monospace, monospace;
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-bold);
+  color: var(--seed-color-fg-brand);
+}
+
+.required {
+  color: var(--seed-color-fg-critical);
+}
+
+.skipped {
+  font-size: var(--seed-font-size-t4);
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+/* ── 계정·감상평 탭 ──────────────────────────────────── */
+
+.specs {
+  display: grid;
+  gap: var(--seed-dimension-x3);
+  margin-top: var(--seed-dimension-x3);
+}
+
+.specs > div {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: var(--seed-dimension-x3);
+  align-items: baseline;
+}
+
+.specs dt {
+  font-size: var(--seed-font-size-t4);
+  white-space: nowrap;
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.specs dd {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: baseline;
+  font-size: var(--seed-font-size-t4);
+}
+
+.reviewStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 14rem));
+  gap: var(--seed-dimension-x2);
+  margin: var(--seed-dimension-x3) 0 var(--seed-dimension-x4);
+}
+
+.statValue {
+  margin-top: 2px;
+  font-size: var(--seed-font-size-t5);
+  font-weight: var(--seed-font-weight-bold);
+}
+
+.reviewList {
+  display: grid;
+  gap: var(--seed-dimension-x3);
+  margin-top: var(--seed-dimension-x2);
+}
+
+.reviewItem {
+  display: grid;
+  gap: var(--seed-dimension-x1);
+  padding: var(--seed-dimension-x3);
+  border-radius: var(--seed-radius-r3);
+  background: var(--seed-color-bg-layer-fill);
+}
+
+.reviewHead {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: baseline;
+}
+
+.reviewMovie {
+  font-size: var(--seed-font-size-t4);
+  font-weight: var(--seed-font-weight-medium);
+}
+
+.reviewContent {
+  font-size: var(--seed-font-size-t4);
+  line-height: 1.5;
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.reviewFoot {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: center;
+}
+
+
+.tabs {
+  display: grid;
+  gap: var(--seed-dimension-x4);
+}
+
+
+
+/*
+ * 요약 카드는 전폭인데 탭 내용만 52rem으로 묶어두니 오른쪽이 통째로 비었다.
+ * 폭을 제한하는 대신, 읽는 흐름이 끊기지 않게 항목을 2열로 흘린다.
+ * 라벨-값 사이가 벌어지는 문제는 각 항목의 grid 폭으로 이미 잡았다.
+ */
+.specs {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--seed-dimension-x6);
+}
+
+@media (max-width: 900px) {
+  .specs {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.survey {
+  grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
+  column-gap: var(--seed-dimension-x6);
+}
+
+/* 설문 항목이 2열로 흐르면 마지막 줄만 밑줄이 없어 어색하다. 모두 긋는다. */
+.surveyRow:last-child {
+  padding-bottom: var(--seed-dimension-x3);
+  border-bottom: 1px solid var(--seed-color-stroke-neutral-subtle);
+}
+
+.reviewList {
+  grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr));
+}
+
+
+/*
+ * 취향 카테고리 칩.
+ *
+ * 문항별 정의목록(dl)이었던 자리를 대신한다. 회원가입이 카테고리 복수
+ * 선택 하나로 바뀌면서 문항 구조가 사라졌다.
+ */
+.surveyChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--seed-dimension-x2);
+  padding: var(--seed-dimension-x4) var(--seed-dimension-x5);
+}
+
+.surveyChip {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--seed-dimension-x2) var(--seed-dimension-x3);
+  font-size: var(--seed-font-size-t3);
+  font-weight: var(--seed-font-weight-medium);
+  border: 1px solid var(--seed-color-stroke-neutral-weak);
+  border-radius: var(--seed-radius-r3);
+  background: var(--seed-color-bg-layer-default);
+  color: var(--seed-color-fg-neutral);
+}
+
+/* 어느 분류인지·코드가 무엇인지. 카테고리 관리 화면과 눈으로 잇는 값이다. */
+.surveyChipMeta {
+  font-family: var(--font-inter), ui-monospace, monospace;
+  font-size: var(--seed-font-size-t1);
+  font-weight: var(--seed-font-weight-regular);
+  color: var(--seed-color-fg-neutral-subtle);
+}

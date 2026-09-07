@@ -1,0 +1,14 @@
+/var/log/pop-talk/chatbot.log {
+    daily
+    rotate 14
+    dateext
+    compress
+    delaycompress
+    missingok
+    notifempty
+    create 0640 root root
+    sharedscripts
+    postrotate
+        /bin/systemctl kill -s HUP rsyslog.service >/dev/null 2>&1 || true
+    endscript
+}

@@ -1,0 +1,47 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Runtime data
+*.log
+*.pid
+*.sqlite
+*.sqlite3
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# JavaScript build output
+node_modules/
+.next/
+dist/
+coverage/
+
+# Infrastructure state
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# Local datasets and exports
+*.dump
+*.bak
+*.gz
+*.csv
+*.xlsx
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

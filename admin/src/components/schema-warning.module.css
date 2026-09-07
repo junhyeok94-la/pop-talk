@@ -1,0 +1,70 @@
+/*
+ * 스키마 어긋남 배너.
+ *
+ * 화면 맨 위 전체 폭을 쓴다 — 어느 화면을 열어도 보여야 하는 값이라
+ * 특정 화면 안쪽에 두지 않는다.
+ */
+.bar {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--seed-dimension-x3);
+  padding: var(--seed-dimension-x3) var(--seed-dimension-x5);
+  background: var(--seed-color-bg-critical-weak);
+  border-bottom: 1px solid var(--seed-color-stroke-neutral-weak);
+  color: var(--seed-color-fg-critical);
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.title {
+  font-size: var(--seed-font-size-t3);
+  font-weight: var(--seed-font-weight-bold);
+}
+
+.list {
+  margin-top: var(--seed-dimension-x1);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t2);
+}
+
+.table {
+  font-family: var(--font-inter), ui-monospace, monospace;
+  font-weight: var(--seed-font-weight-medium);
+}
+
+.gone {
+  color: var(--seed-color-fg-critical);
+}
+
+/* 어느 화면이 영향을 받는지. 운영자가 무엇을 의심해야 하는지 알려준다. */
+.usedBy {
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.hint {
+  margin-top: var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t2);
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.close {
+  flex-shrink: 0;
+  padding: 2px;
+  cursor: pointer;
+  color: var(--seed-color-fg-neutral-muted);
+  background: none;
+  border: none;
+}

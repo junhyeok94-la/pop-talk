@@ -1,0 +1,10 @@
+# 루트 .gitignore가 node_modules·.next·.env 등을 이미 덮는다.
+# 여기에는 admin에만 있는 것만 적는다.
+
+# 빌드가 만드는 API 문서. 합쳐서 3.6MB라 커밋하면 저장소가 계속 무거워진다.
+# `yarn build`(= docs:api + next build)가 매번 새로 만든다.
+/public/api-docs.html
+/public/api-swagger.html
+
+# 스냅샷 갱신 시 생기는 임시 파일
+/src/lib/snapshot/*.tmp.json

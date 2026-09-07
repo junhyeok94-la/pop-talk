@@ -1,0 +1,138 @@
+.inactive {
+  opacity: .5;
+}
+
+.code {
+  display: inline-block;
+  padding: 2px var(--seed-dimension-x2);
+  font-family: var(--font-inter), ui-monospace, monospace;
+  font-size: var(--seed-font-size-t2);
+  border-radius: var(--seed-radius-r2);
+  background: var(--seed-color-bg-informative-weak);
+  color: var(--seed-color-fg-informative);
+}
+
+.name {
+  font-weight: var(--seed-font-weight-medium);
+}
+
+/*
+ * 프롬프트 문장 열.
+ *
+ * 이 표에서 가장 긴 값이라 폭을 잡아 주지 않으면 다른 열을 다 밀어낸다.
+ * min-width로 바닥을 두고 max-width로 천장을 둔다 — 문장이 길어져도 표가
+ * 옆으로 늘어나지 않고 이 칸 안에서만 줄바꿈한다.
+ */
+.promptCol {
+  min-width: 15rem;
+  max-width: 22rem;
+}
+
+/*
+ * 알약 버튼 미리보기.
+ *
+ * 서비스 홈의 알약과 같은 모양으로 그린다 — 테두리 있는 둥근 알약이다.
+ * 운영자가 "이 글자가 저기 저렇게 들어간다"를 표에서 바로 보게 하려는
+ * 것이라, 실물과 닮은 편이 낫다.
+ */
+.pill {
+  display: inline-block;
+  padding: 3px var(--seed-dimension-x3);
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-medium);
+  white-space: nowrap;
+  border: 1px solid var(--seed-color-stroke-neutral-weak);
+  border-radius: var(--seed-radius-full);
+  background: var(--seed-color-bg-neutral-weak);
+  color: var(--seed-color-fg-neutral);
+}
+
+/* 문구가 묶는 카테고리 코드들. 여럿이라 줄바꿈을 허용한다. */
+.codeList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--seed-dimension-x1);
+}
+
+/*
+ * 실재하지 않는 카테고리 코드.
+ *
+ * 배열에 FK가 없어(011) 카테고리가 지워지면 여기 죽은 코드가 남는다.
+ * 어드민이 저장·삭제 때 검사하지만 동시 작업에는 틈이 있어, 그래도 생기면
+ * 눈에 띄어야 한다. 붉게 칠하고 title로 이유를 단다.
+ */
+.codeDead {
+  display: inline-block;
+  padding: 2px var(--seed-dimension-x2);
+  font-family: var(--font-inter), ui-monospace, monospace;
+  font-size: var(--seed-font-size-t2);
+  border-radius: var(--seed-radius-r2);
+  background: var(--seed-color-bg-critical-weak);
+  color: var(--seed-color-fg-critical);
+  text-decoration: line-through;
+}
+
+/* 수정 창의 카테고리 고르개. 열넷이 한눈에 들어오도록 감싼다. */
+.codePicker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--seed-dimension-x1);
+  max-height: 11rem;
+  overflow-y: auto;
+  padding: var(--seed-dimension-x2);
+  border: 1px solid var(--seed-color-stroke-neutral-weak);
+  border-radius: var(--seed-radius-r3);
+}
+
+.codeChip,
+.codeChipOn {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 4px var(--seed-dimension-x2);
+  font-family: var(--font-inter), ui-monospace, monospace;
+  font-size: var(--seed-font-size-t2);
+  cursor: pointer;
+  border: 1px solid var(--seed-color-stroke-neutral-weak);
+  border-radius: var(--seed-radius-full);
+  background: var(--seed-color-bg-layer-default);
+  color: var(--seed-color-fg-neutral);
+}
+
+.codeChipOn {
+  border-color: var(--seed-color-stroke-brand);
+  background: var(--seed-color-bg-brand-weak);
+  color: var(--seed-color-fg-brand);
+}
+
+.actions {
+  display: flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--seed-dimension-x3);
+}
+
+.formField label {
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-medium);
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.formField input,
+.formField select {
+  padding: var(--seed-dimension-x2) var(--seed-dimension-x3);
+  font-size: var(--seed-font-size-t3);
+}
+
+/* 이 문구에 붙은 영화 수. display_categories_service 뷰의 movie_count다. */
+.movieCount {
+  margin-right: 2px;
+  font-size: var(--seed-font-size-t3);
+  font-weight: var(--seed-font-weight-bold);
+  color: var(--seed-color-fg-neutral);
+}

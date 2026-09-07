@@ -1,0 +1,66 @@
+/*
+ * 배치(그리드·간격·정렬)는 Seed Grid/VStack/HStack이 담당한다.
+ * 여기 남은 것은 카드 외곽선 상태와 라벨 톤뿐이다.
+ */
+
+.card {
+  display: block;
+  text-align: left;
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.card:hover {
+  box-shadow: 0 2px 8px rgb(0 0 0 / 6%);
+}
+
+.cardActive {
+  composes: card;
+  border-color: var(--seed-color-stroke-brand-solid);
+  box-shadow: 0 0 0 1px var(--seed-color-stroke-brand-weak);
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.tag {
+  display: inline-block;
+  padding: 2px var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-medium);
+  white-space: nowrap;
+  border: 1px solid transparent;
+  border-radius: var(--seed-radius-full);
+}
+
+.toneNeutral {
+  background: var(--seed-color-bg-neutral-weak);
+  border-color: var(--seed-color-stroke-neutral-weak);
+  color: var(--seed-color-fg-neutral-muted);
+}
+.toneBrand {
+  background: var(--seed-color-bg-brand-weak);
+  border-color: var(--seed-color-stroke-brand-weak);
+  color: var(--seed-color-fg-brand);
+}
+.tonePositive {
+  background: var(--seed-color-bg-positive-weak);
+  border-color: var(--seed-color-stroke-positive-weak);
+  color: var(--seed-color-fg-positive);
+}
+.toneWarning {
+  background: var(--seed-color-bg-warning-weak);
+  border-color: var(--seed-color-stroke-warning-weak);
+  color: var(--seed-color-fg-warning);
+}
+.toneCritical {
+  background: var(--seed-color-bg-critical-weak);
+  border-color: var(--seed-color-stroke-critical-weak);
+  color: var(--seed-color-fg-critical);
+}
+.toneInformative {
+  background: var(--seed-color-bg-informative-weak);
+  border-color: var(--seed-color-stroke-informative-weak);
+  color: var(--seed-color-fg-informative);
+}

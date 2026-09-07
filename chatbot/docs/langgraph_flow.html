@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pop Talk Chatbot – LangGraph 노드 흐름도</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #0b0d14; --surface: #12151f; --card: #181c2a; --border: #252a3d;
+      --text: #e4e8f7; --muted: #7b82a3;
+      --green: #22d3a0; --yellow: #ffd166; --purple: #a259ff;
+      --blue: #4f80ff; --cyan: #00d4ff; --orange: #ff8c42;
+      --pink: #ff5fa0; --red: #ff4f6b;
+      --node-w: 190px;
+    }
+    body { font-family:'Inter',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; overflow-x:hidden; }
+    header {
+      padding:24px 36px 18px; border-bottom:1px solid var(--border);
+      display:flex; align-items:center; gap:14px;
+      background:linear-gradient(135deg,#0f1220 0%,#12172a 100%);
+    }
+    .logo { width:40px;height:40px; border-radius:11px; display:flex;align-items:center;justify-content:center;
+      font-size:18px; background:linear-gradient(135deg,var(--blue),var(--purple));
+      box-shadow:0 0 18px rgba(79,128,255,.3); }
+    header h1 { font-size:18px; font-weight:700; }
+    header p  { font-size:11px; color:var(--muted); margin-top:2px; }
+    .legend { margin-left:auto; display:flex; gap:16px; flex-wrap:wrap; }
+    .li { display:flex;align-items:center;gap:5px;font-size:10px;color:var(--muted); }
+    .ld { width:8px;height:8px;border-radius:50%; }
+    .hint { text-align:center; font-size:11px; color:var(--muted); padding:8px;
+      background:rgba(79,128,255,.05); border-bottom:1px solid var(--border); }
+    .hint span { color:var(--blue); }
+
+    /* canvas wrapper */
+    .wrap { position:relative; width:100%; overflow-x:auto; }
+    #cv { position:absolute;top:0;left:0;pointer-events:none;z-index:0; }
+    .graph { position:relative; width:1500px; padding:36px 56px 80px; z-index:1; }
+
+    /* rows */
+    .row { display:flex; justify-content:center; align-items:flex-start; gap:18px; margin-bottom:0; }
+    .sp  { height:58px; }
+
+    /* node */
+    .node {
+      position:relative; width:var(--node-w); border-radius:13px;
+      border:1.5px solid var(--border); background:var(--card);
+      cursor:pointer; transition:transform .18s,box-shadow .18s,border-color .18s;
+      user-select:none; overflow:hidden;
+    }
+    .node:hover { transform:translateY(-3px) scale(1.02); }
+    .node.active { border-width:2px; transform:translateY(-3px) scale(1.03); }
+    .nh { padding:11px 13px 9px; display:flex;flex-direction:column;gap:3px; }
+    .ns { font-size:8.5px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase;
+      font-family:'JetBrains Mono',monospace; opacity:.7; }
+    .nt { font-size:12px; font-weight:600; line-height:1.3; }
+    .nf { font-size:9.5px; color:var(--muted); margin-top:1px; font-family:'JetBrains Mono',monospace; }
+    .nb { height:3px; border-radius:0 0 2px 2px; }
+
+    /* themes */
+    .t-start,.t-end,.t-fin { border-color:var(--green); box-shadow:0 0 16px rgba(34,211,160,.18); }
+    .t-start .nb,.t-end .nb,.t-fin .nb { background:var(--green); }
+    .t-start .ns,.t-end .ns,.t-fin .ns { color:var(--green); }
+    .t-val { border-color:var(--yellow); box-shadow:0 0 14px rgba(255,209,102,.13); }
+    .t-val .nb { background:var(--yellow); } .t-val .ns { color:var(--yellow); }
+    .t-int { border-color:var(--purple); box-shadow:0 0 14px rgba(162,89,255,.18); }
+    .t-int .nb { background:var(--purple); } .t-int .ns { color:var(--purple); }
+    .t-ana { border-color:var(--blue); box-shadow:0 0 14px rgba(79,128,255,.18); }
+    .t-ana .nb { background:var(--blue); } .t-ana .ns { color:var(--blue); }
+    .t-res { border-color:var(--cyan); box-shadow:0 0 14px rgba(0,212,255,.16); }
+    .t-res .nb { background:var(--cyan); } .t-res .ns { color:var(--cyan); }
+    .t-ret { border-color:var(--orange); box-shadow:0 0 14px rgba(255,140,66,.16); }
+    .t-ret .nb { background:var(--orange); } .t-ret .ns { color:var(--orange); }
+    .t-gen { border-color:var(--purple); box-shadow:0 0 14px rgba(162,89,255,.18); }
+    .t-gen .nb { background:var(--purple); } .t-gen .ns { color:var(--purple); }
+    .t-rev { border-color:var(--pink); box-shadow:0 0 14px rgba(255,95,160,.16); }
+    .t-rev .nb { background:var(--pink); } .t-rev .ns { color:var(--pink); }
+    .t-fal { border-color:var(--red); box-shadow:0 0 14px rgba(255,79,107,.16); }
+    .t-fal .nb { background:var(--red); } .t-fal .ns { color:var(--red); }
+
+    /* branch grid */
+    .bgrid { display:grid; grid-template-columns:repeat(7,var(--node-w)); gap:14px; justify-content:center; }
+
+    /* modal */
+    .overlay { display:none; position:fixed;inset:0; background:rgba(0,0,0,.62);
+      backdrop-filter:blur(4px); z-index:200; align-items:center;justify-content:center; }
+    .overlay.open { display:flex; }
+    .modal {
+      width:620px; max-width:96vw; max-height:88vh; overflow-y:auto;
+      background:var(--card); border:1.5px solid var(--border); border-radius:18px;
+      padding:26px 30px; animation:min .2s ease;
+    }
+    @keyframes min { from{opacity:0;transform:scale(.95) translateY(14px)} to{opacity:1;transform:none} }
+    .mh { display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:18px; }
+    .mbadge { font-size:8.5px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;
+      padding:3px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;
+      margin-bottom:5px;display:inline-block; }
+    .mtitle { font-size:16px;font-weight:700; }
+    .mfn    { font-size:10.5px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:3px; }
+    .xbtn   { width:28px;height:28px;border-radius:7px;background:var(--surface);
+      border:1px solid var(--border);color:var(--muted);cursor:pointer;flex-shrink:0;
+      font-size:14px;display:flex;align-items:center;justify-content:center;
+      transition:background .14s,color .14s; }
+    .xbtn:hover { background:var(--red);color:#fff; }
+    .st  { font-size:9.5px;font-weight:700;letter-spacing:1.1px;text-transform:uppercase;
+      color:var(--muted);margin-bottom:8px;margin-top:16px; }
+    .ls  { display:flex;flex-direction:column;gap:7px; }
+    .lsi { display:flex;gap:10px;align-items:flex-start; }
+    .sn  { width:20px;height:20px;border-radius:6px;display:flex;align-items:center;
+      justify-content:center;font-size:9.5px;font-weight:700;flex-shrink:0;
+      font-family:'JetBrains Mono',monospace; }
+    .st2 { font-size:12.5px;line-height:1.55;padding-top:1px; }
+    .st2 code { background:rgba(255,255,255,.07);border-radius:4px;padding:1px 5px;
+      font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--cyan); }
+    .note { background:rgba(79,128,255,.07);border-left:3px solid var(--blue);
+      border-radius:0 8px 8px 0;padding:10px 13px;margin-top:12px;
+      font-size:11.5px;line-height:1.6;color:var(--muted); }
+    .note strong { color:var(--text); }
+
+    .wrap::-webkit-scrollbar{height:5px}
+    .wrap::-webkit-scrollbar-track{background:var(--surface)}
+    .wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+  </style>
+</head>
+<body>
+<header>
+  <div class="logo">🎬</div>
+  <div>
+    <h1>Pop Talk Chatbot — LangGraph 노드 흐름도</h1>
+    <p>app/agents/graph.py</p>
+  </div>
+  <div class="legend">
+    <div class="li"><div class="ld" style="background:#22d3a0"></div>시작/종료/확정</div>
+    <div class="li"><div class="ld" style="background:#ffd166"></div>검증</div>
+    <div class="li"><div class="ld" style="background:#a259ff"></div>LLM(분류/생성)</div>
+    <div class="li"><div class="ld" style="background:#4f80ff"></div>LLM(분석)</div>
+    <div class="li"><div class="ld" style="background:#00d4ff"></div>DB 영화 확정</div>
+    <div class="li"><div class="ld" style="background:#ff8c42"></div>정보 수집(Retrieve)</div>
+    <div class="li"><div class="ld" style="background:#ff5fa0"></div>검수(Review)</div>
+    <div class="li"><div class="ld" style="background:#ff4f6b"></div>Fallback</div>
+  </div>
+</header>
+<div class="hint">노드를 <span>클릭</span>하면 상세 처리 로직을 확인할 수 있습니다 · ESC로 닫기</div>
+
+<div class="wrap" id="wrap">
+  <canvas id="cv"></canvas>
+  <div class="graph" id="graph">
+
+    <div class="row"><div class="node t-start" id="n-start" onclick="open_('start')">
+      <div class="nh"><div class="ns">START</div><div class="nt">진입점</div><div class="nf">POST /chat</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row"><div class="node t-val" id="n-01" onclick="open_('01')">
+      <div class="nh"><div class="ns">STEP 01</div><div class="nt">입력 검증</div><div class="nf">validate_input</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row"><div class="node t-int" id="n-02" onclick="open_('02')">
+      <div class="nh"><div class="ns">STEP 02</div><div class="nt">의도 분류</div><div class="nf">classify_intent</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row"><div class="node t-ana" id="n-03" onclick="open_('03')">
+      <div class="nh"><div class="ns">STEP 03</div><div class="nt">쿼리 분석</div><div class="nf">analyze_query</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row"><div class="node t-res" id="n-04" onclick="open_('04')">
+      <div class="nh"><div class="ns">STEP 04</div><div class="nt">영화 확정</div><div class="nf">resolve_movie</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <!-- STEP 05 branches -->
+    <div class="row"><div class="bgrid">
+      <div class="node t-ret" id="n-05a" onclick="open_('05a')">
+        <div class="nh"><div class="ns">05-A</div><div class="nt">기본정보</div><div class="nf">query_movie_info</div></div><div class="nb"></div>
+      </div>
+      <div class="node t-ret" id="n-05b" onclick="open_('05b')">
+        <div class="nh"><div class="ns">05-B</div><div class="nt">평점 조회</div><div class="nf">query_rating</div></div><div class="nb"></div>
+      </div>
+      <div class="node t-ret" id="n-05c" onclick="open_('05c')">
+        <div class="nh"><div class="ns">05-C</div><div class="nt">리뷰 조회</div><div class="nf">retrieve_reviews</div></div><div class="nb"></div>
+      </div>
+      <div class="node t-ret" id="n-05d" onclick="open_('05d')">
+        <div class="nh"><div class="ns">05-D</div><div class="nt">평점+리뷰</div><div class="nf">rating_and_reviews</div></div><div class="nb"></div>
+      </div>
+      <div class="node t-ret" id="n-05e" onclick="open_('05e')">
+        <div class="nh"><div class="ns">05-E</div><div class="nt">영화 추천</div><div class="nf">recommend_movies</div></div><div class="nb"></div>
+      </div>
+      <div class="node t-ret" id="n-05f" onclick="open_('05f')">
+        <div class="nh"><div class="ns">05-F</div><div class="nt">YouTube 링크</div><div class="nf">youtube_review_links</div></div><div class="nb"></div>
+      </div>
+      <div class="node t-ret" id="n-05g" onclick="open_('05g')">
+        <div class="nh"><div class="ns">05-G</div><div class="nt">개봉 일정</div><div class="nf">release_schedule</div></div><div class="nb"></div>
+      </div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row"><div class="node t-gen" id="n-06" onclick="open_('06')">
+      <div class="nh"><div class="ns">STEP 06</div><div class="nt">초안 생성</div><div class="nf">generate_answer</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row"><div class="node t-rev" id="n-07" onclick="open_('07')">
+      <div class="nh"><div class="ns">STEP 07</div><div class="nt">초안 검수</div><div class="nf">review_draft</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row"><div class="node t-fin" id="n-08" onclick="open_('08')">
+      <div class="nh"><div class="ns">STEP 08</div><div class="nt">최종 확정</div><div class="nf">finalize_answer</div></div><div class="nb"></div>
+    </div></div>
+    <div class="sp"></div>
+
+    <div class="row" style="gap:160px">
+      <div class="node t-fal" id="n-99" onclick="open_('99')" style="width:170px">
+        <div class="nh"><div class="ns">STEP 99</div><div class="nt">Fallback</div><div class="nf">안전 응답 반환</div></div><div class="nb"></div>
+      </div>
+      <div class="node t-end" id="n-end" style="width:170px">
+        <div class="nh"><div class="ns">END</div><div class="nt">응답 반환</div><div class="nf">사용자 전달</div></div><div class="nb"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="overlay" id="overlay" onclick="closeM(event)">
+  <div class="modal" id="modal">
+    <div class="mh">
+      <div>
+        <div class="mbadge" id="mb"></div>
+        <div class="mtitle" id="mt"></div>
+        <div class="mfn"   id="mf"></div>
+      </div>
+      <button class="xbtn" onclick="closeO()">✕</button>
+    </div>
+    <div id="mbody"></div>
+  </div>
+</div>
+
+<script>
+const D = {
+  start:{badge:'START',title:'진입점',fn:'POST /chat → AgentState 초기화',color:'#22d3a0',
+    steps:[
+      '사용자 질문(<code>question</code>)과 <code>chat_history</code>를 수신합니다.',
+      'JWT 토큰을 검증해 로그인 사용자면 <code>user_preferences</code>(온보딩 취향 카테고리 목록)를 state에 주입합니다.',
+      '<code>exclude_spoilers</code> 옵션(기본 <code>true</code>)을 state에 설정합니다.',
+      'AgentState 초기화 후 <code>step_01_validate_input</code>으로 진입합니다.',
+    ],
+    note:'AgentState는 질문·의도·QueryPlan·영화·검색결과·초안·검수결과 등 그래프 전체 실행 컨텍스트를 담습니다.'
+  },
+  '01':{badge:'STEP 01',title:'입력 검증',fn:'validate_input(state)',color:'#ffd166',
+    steps:[
+      '<code>question.strip()</code>으로 공백 제거 후 빈 문자열 여부를 확인합니다.',
+      '빈 문자열 → <code>{"error":"질문을 입력해 주세요.","intent":"fallback"}</code> 반환.',
+      '<code>next_after_validation()</code>이 <code>error</code> 여부를 판단해 <b>step_99(fallback)</b> 또는 <b>step_02</b>로 분기합니다.',
+      '정상이면 정제된 질문을 state에 저장하고 step_02로 진행합니다.',
+    ],
+    note:'가장 단순한 노드. 빈 질문만 걸러냅니다.'
+  },
+  '02':{badge:'STEP 02',title:'의도 분류',fn:'classify_intent(state)',color:'#a259ff',
+    steps:[
+      '<b>mock 모드 / API 키 없음</b>: 키워드 규칙(<code>_rule_based_classify_intent</code>)으로 분류합니다.',
+      '<b>운영 모드</b>: <code>ClovaStudioClient.route()</code>로 CLOVA Router를 호출합니다.',
+      'Router 결과에서 <code>blockedContent</code> 또는 <code>safety</code> 위반 감지 시 → intent=fallback 반환.',
+      'Router domain 문자열 → <code>_intent_from_router_domain()</code>으로 Intent enum으로 변환.',
+      'Router 장애 시 → 규칙 기반으로 자동 폴백(<code>intent_source:"router_fallback_rule"</code>).',
+      '재검수 중이면 이전 검수 피드백도 Router 문맥에 포함합니다.',
+    ],
+    note:'분류 의도: movie_info / rating / review_summary / rating_and_review / recommendation / release_schedule / youtube_review / fallback'
+  },
+  '03':{badge:'STEP 03',title:'쿼리 분석',fn:'analyze_query(state)',color:'#4f80ff',
+    steps:[
+      '다중 영화 평점 비교(<code>_is_multi_movie_rating_comparison</code>) 감지 시 → 지원 불가 에러 반환.',
+      '<b>mock / 키 없음</b>: <code>_fallback_query_plan()</code>으로 규칙 기반 QueryPlan 생성.',
+      '<b>운영</b>: <code>ClovaStudioClient.analyze_query()</code>로 LLM이 자연어를 구조화된 QueryPlan으로 변환.',
+      'QueryPlan 주요 필드: <code>movie_title, genres, actors, directors, countries, keywords, avoid_keywords, release_year_from/to, max_runtime_minutes, min_rating, limit, sort_by, rating_sources, review_sources, resource_type, requires_vector_search</code>',
+      '<code>_sanitize_llm_query_plan()</code>으로 LLM 출력 이상값 보정 후 저장.',
+      'LLM 실패 시 규칙 기반 폴백(<code>chat_completions_fallback_rule</code>) 자동 적용.',
+    ],
+    note:'QueryPlan은 LLM과 DB 작업의 경계입니다. 이후 모든 노드는 자유 형식 텍스트가 아닌 검증된 필드만 사용합니다.'
+  },
+  '04':{badge:'STEP 04',title:'영화 확정',fn:'resolve_movie(state)',color:'#00d4ff',
+    steps:[
+      'QueryPlan의 <code>movie_title</code> → <code>movie_repository.find_by_title()</code> DB 검색.',
+      '못 찾으면 질문 전체로 DB 검색(<code>find_mentioned_in_question</code>).',
+      '"그 영화/이 영화/해당 영화" 지시어 감지 시 → <code>previous_movie_id</code>로 이전 영화 재사용.',
+      '최종 실패 시: "카탈로그에서 찾지 못했습니다" 에러 + <code>intent=fallback</code> → step_99.',
+      '성공 시: <code>state["movie"]</code>에 영화 메타데이터 주입 후 step_05로 진행.',
+    ],
+    note:'추천(recommendation) 의도는 특정 영화 없이도 정상 진행됩니다. 미지원 외부 플랫폼 요청도 여기서 안내합니다.'
+  },
+  '05a':{badge:'STEP 05-A',title:'영화 기본정보 조회',fn:'query_movie_info(state)',color:'#ff8c42',
+    steps:[
+      '추가 DB 쿼리 없이 step_04에서 확정된 <code>state["movie"]</code>를 그대로 사용합니다.',
+      'sources에 <code>{"type":"movie","movie_id":...}</code>만 등록하고 반환합니다.',
+      'step_06(초안 생성)으로 진행합니다.',
+    ],
+    note:'"이 영화 어떤 영화야?", "감독이 누구야?" 같은 기본 정보 질문에 매핑됩니다. 7개 step_05 노드 중 가장 단순합니다.'
+  },
+  '05b':{badge:'STEP 05-B',title:'평점 조회',fn:'query_rating(state)',color:'#ff8c42',
+    steps:[
+      'QueryPlan의 <code>rating_sources</code> 확인 (ex: ["pop_talk","naver"]).',
+      '지원 소스(<code>_COLLECTED_SOURCE_SYSTEMS</code>)와 미지원 소스를 분류합니다.',
+      '미지원 소스 → <code>_source_capability_notice()</code>로 "외부 플랫폼 미지원" 안내 생성.',
+      '지원 소스가 없으면 빈 rating_stats 반환(안내 메시지만 전달).',
+      '지원 소스 있으면 → <code>movie_repository.get_rating_stats(movie_id, source_system)</code> 호출.',
+      '평균 평점·리뷰 수 반환. 데이터 유무에 따라 <code>source_data_status.available</code> 기록.',
+    ],
+    note:'왓챠·네이버 등 외부 플랫폼 요청 시 "제공하지 않는 출처"를 명확히 안내합니다.'
+  },
+  '05c':{badge:'STEP 05-C',title:'리뷰 조회',fn:'retrieve_reviews(state)',color:'#ff8c42',
+    steps:[
+      'QueryPlan의 <code>review_sources</code> 확인 → 지원/미지원 분류.',
+      '지원 소스 없으면 → <code>retrieved_reviews:[]</code>, mode:<code>"unsupported_external_source"</code> 반환.',
+      '<code>movie_repository.search_reviews()</code> SQL 필터 기반 조회:',
+      '&nbsp;&nbsp;· <code>exclude_spoilers=True</code> (스포일러 리뷰 SQL에서 제외)',
+      '&nbsp;&nbsp;· <code>keywords</code>: QueryPlan 키워드로 필터링',
+      '&nbsp;&nbsp;· <code>limit=max(6, plan.limit)</code>: 최소 6개 보장',
+      '결과를 <code>_sort_reviews_by_rating()</code>으로 별점 내림차순 정렬 (무점수 리뷰는 후순위).',
+      '평점 통계(<code>get_rating_stats</code>)도 함께 조회하여 반환.',
+    ],
+    note:'벡터(임베딩) 검색이 아닌 SQL 필터 방식(mode:"representative_sql")입니다. 대표 표본만 LLM에 전달합니다.'
+  },
+  '05d':{badge:'STEP 05-D',title:'평점 + 리뷰 동시 조회',fn:'query_rating_and_reviews(state)',color:'#ff8c42',
+    steps:[
+      '<code>query_rating(state)</code>와 <code>retrieve_reviews(state)</code>를 순차 호출합니다.',
+      '두 결과의 <code>capability_notice</code>를 <code>_merge_capability_notices()</code>로 합산합니다.',
+      '두 결과의 <code>source_data_status</code>를 <code>_merge_source_data_statuses()</code>로 합산합니다.',
+      'sources 목록도 두 노드 결과를 합쳐 반환합니다.',
+    ],
+    note:'"이 영화 평점이랑 리뷰 같이 보여줘" 의도에 매핑됩니다. 별도 로직 없이 05-B + 05-C를 합성합니다.'
+  },
+  '05e':{badge:'STEP 05-E',title:'영화 추천 (가장 복잡)',fn:'recommend_movies(state)',color:'#ff8c42',
+    steps:[
+      '로그인 사용자의 <code>preferred_category_ids</code>, <code>movie_categories</code> 취향 확인.',
+      'QueryPlan에 구체 조건(장르/배우/감독 등) 유무로 "개인화 vs 조건부 추천" 구분.',
+      '구체 조건 없는 개인화 추천 → 취향 설명문이 임베딩 쿼리의 중심.',
+      '구체 조건 있으면 → 질문 + 취향을 혼합한 임베딩 쿼리 구성.',
+      'CLOVA Studio <code>embed()</code>로 쿼리 임베딩 생성 → <code>pgvector</code> 유사도 검색.',
+      '벡터 결과 없으면 → 메타데이터 검색(<code>metadata_fallback</code>)으로 자동 전환.',
+      'keywords 결과도 없으면 → keywords 제거 후 재시도.',
+      '<b>세렌디피티</b>: 개인화 추천에서 마지막 자리를 "취향 밖 고평가 작품"으로 교체.',
+      '&nbsp;&nbsp;→ 조건: 평균 4.5점 이상, 리뷰 30건 이상, 취향 임베딩과 의미 거리가 먼 작품.',
+      '각 추천 영화에 <code>matched_constraints</code>를 기록 (검수 근거 추적용).',
+    ],
+    note:'serendipity 영화는 recommendation_role="serendipity"로 표시되어 LLM이 "의외의 한 편"으로 설명하도록 유도합니다.'
+  },
+  '05f':{badge:'STEP 05-F',title:'YouTube 리뷰 링크 조회',fn:'retrieve_youtube_review_links(state)',color:'#ff8c42',
+    steps:[
+      '확정된 영화 제목으로 <code>YouTubeClient.search_movie_review_links(title, limit)</code> 호출.',
+      'limit은 QueryPlan의 limit값 사용.',
+      'RuntimeError / httpx.HTTPError 발생 시 → <code>youtube_search_error</code>와 빈 목록 반환 (그래프 중단 없음).',
+      '성공 시: <code>video_id</code>, <code>video_url</code> 포함 영상 목록을 state에 저장.',
+    ],
+    note:'YouTube Data API v3를 실시간 호출합니다. API 장애 시에도 그래프 전체가 중단되지 않고 빈 결과로 계속 진행됩니다.'
+  },
+  '05g':{badge:'STEP 05-G',title:'개봉 일정 조회',fn:'retrieve_release_schedule(state)',color:'#ff8c42',
+    steps:[
+      'QueryPlan의 <code>release_date_from</code>, <code>release_date_to</code>를 ISO 날짜로 파싱.',
+      '날짜 파싱 실패 시 → <code>"개봉일 조회 범위를 해석하지 못했습니다"</code> 에러 반환.',
+      '<code>movie_repository.list_releases(from, to, limit)</code>으로 해당 기간 개봉작 목록 조회.',
+      '조회 결과를 <code>release_movies</code>로 state에 저장 후 step_06으로 진행.',
+    ],
+    note:'"이번 달 개봉 영화 알려줘", "이번 주 볼만한 영화"에 매핑됩니다.'
+  },
+  '06':{badge:'STEP 06',title:'초안 생성',fn:'generate_answer(state)',color:'#a259ff',
+    steps:[
+      'error가 있으면 에러 메시지를 초안으로 직접 사용 (LLM 호출 없음).',
+      '결정론적 데이터(추천/개봉 등) → <code>_deterministic_source_answer()</code>로 LLM 없이 직접 생성.',
+      '<b>mock / 키 없음</b>: <code>_mock_answer()</code>로 검색 결과 요약만 반환.',
+      '<b>운영</b>: <code>ClovaStudioClient.chat()</code> 호출 → 검색 근거를 컨텍스트로 제공해 답변 생성.',
+      '<code>_evidence_units(state)</code>로 M/R/V/D/S 근거 ID를 컨텍스트에 주입.',
+      '생성 후 <code>_repair_missing_evidence_citations()</code>으로 누락 인용을 자동 보완.',
+    ],
+    note:'근거 ID 체계 — M(영화 메타), R(리뷰), V(유튜브 영상), D(개봉 데이터), S(서비스 능력 안내)'
+  },
+  '07':{badge:'STEP 07',title:'초안 검수',fn:'review_draft(state)',color:'#ff5fa0',
+    steps:[
+      '결정론적 생성 소스면 → 로컬 규칙 검수(<code>_local_answer_review</code>) 적용.',
+      '<b>운영</b>: <code>ClovaStudioClient.review_answer()</code>로 LLM 검수 호출.',
+      '검수 점수 항목: <code>intent_alignment(25) + factual_grounding(30) + completeness(20) + spoiler_safety(15) + clarity(10)</code> → 합계 100점.',
+      '통과 기준: <code>chat_review_pass_score</code>(기본 85점) 이상 + critical failure 없음.',
+      '<code>_validate_evidence_citations()</code>으로 근거 ID 인용 정합성 검사.',
+      '<b>Retry 라우팅 (next_after_review):</b>',
+      '&nbsp;&nbsp;· <code>intent_mismatch</code> → step_02(의도 재분류)',
+      '&nbsp;&nbsp;· <code>source_mismatch / insufficient_evidence</code> → step_03(쿼리 재분석)',
+      '&nbsp;&nbsp;· <code>retry_stage="retrieve"</code> → step_05(재검색)',
+      '&nbsp;&nbsp;· 그 외 실패 → step_06(초안 재생성)',
+      '재시도 소진(<code>retry_allowed=False</code>) 또는 통과 → step_08.',
+    ],
+    note:'최대 2회 재시도(chat_review_max_retries=2, 총 3번의 초안). 소진 시 step_08이 안전 응답으로 전환합니다.'
+  },
+  '08':{badge:'STEP 08',title:'최종 확정',fn:'finalize_answer(state)',color:'#22d3a0',
+    steps:[
+      '검수 통과한 <code>draft_answer</code>를 최종 답변으로 확정합니다.',
+      '재시도 소진 + 리뷰 데이터 있으면 → <code>_grounded_review_fallback_answer()</code>로 별점순 리뷰 나열.',
+      '<code>_strip_internal_evidence_citations()</code>으로 답변 내 내부 근거 ID([M1],[R2] 등) 제거.',
+      '<code>answer</code>, <code>intent</code>, <code>movie_id</code>를 최종 응답에 포함합니다.',
+    ],
+    note:'사용자에게는 근거 ID가 노출되지 않고 자연스러운 한국어 답변만 전달됩니다.'
+  },
+  '99':{badge:'STEP 99',title:'Fallback',fn:'fallback(state)',color:'#ff4f6b',
+    steps:[
+      '입력 검증 실패(step_01), 영화 미발견(step_04), 안전 정책 위반(step_02), 분류 불가 의도에서 진입합니다.',
+      'state의 <code>error</code> 메시지가 있으면 그대로 사용자에게 반환합니다.',
+      'error 없으면 기본 안내: "Pop Talk 영화 서비스 범위 안에서 질문해 주세요." 반환.',
+    ],
+    note:'어떤 오류 상황에서도 사용자가 빈 응답을 받지 않도록 보장하는 안전망 노드입니다.'
+  },
+};
+
+function open_(key) {
+  const d=D[key]; if(!d) return;
+  document.querySelectorAll('.node').forEach(n=>n.classList.remove('active'));
+  const el=document.getElementById('n-'+key);
+  if(el) el.classList.add('active');
+  const badge=document.getElementById('mb');
+  badge.textContent=d.badge;
+  badge.style.cssText=`background:${d.color}22;color:${d.color};border:1px solid ${d.color}44`;
+  document.getElementById('mt').textContent=d.title;
+  document.getElementById('mf').textContent=d.fn;
+  let html=`<div class="st">처리 로직</div><div class="ls">`;
+  d.steps.forEach((s,i)=>{
+    html+=`<div class="lsi">
+      <div class="sn" style="background:${d.color}22;color:${d.color};border:1px solid ${d.color}44">${i+1}</div>
+      <div class="st2">${s}</div></div>`;
+  });
+  html+=`</div>`;
+  if(d.note) html+=`<div class="note"><strong>📌 설계 의도</strong><br>${d.note}</div>`;
+  document.getElementById('mbody').innerHTML=html;
+  document.getElementById('overlay').classList.add('open');
+}
+function closeM(e){ if(e.target===document.getElementById('overlay')) closeO(); }
+function closeO(){
+  document.getElementById('overlay').classList.remove('open');
+  document.querySelectorAll('.node').forEach(n=>n.classList.remove('active'));
+}
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeO(); });
+
+/* ═══ CANVAS ═══ */
+const wrap2=document.getElementById('wrap');
+const cv=document.getElementById('cv');
+const cx2=cv.getContext('2d');
+
+function nb2(id){
+  const r=document.getElementById(id).getBoundingClientRect();
+  const w=wrap2.getBoundingClientRect();
+  return{
+    t:r.top-w.top+wrap2.scrollTop,
+    b:r.bottom-w.top+wrap2.scrollTop,
+    l:r.left-w.left+wrap2.scrollLeft,
+    r:r.right-w.left+wrap2.scrollLeft,
+    cx:r.left-w.left+wrap2.scrollLeft+r.width/2,
+    cy:r.top-w.top+wrap2.scrollTop+r.height/2,
+    w:r.width,h:r.height
+  };
+}
+
+function bezier(x1,y1,x2,y2,col,dash){
+  cx2.save();
+  cx2.strokeStyle=col; cx2.lineWidth=1.6;
+  if(dash) cx2.setLineDash(dash); else cx2.setLineDash([]);
+  cx2.beginPath(); cx2.moveTo(x1,y1);
+  const my=(y1+y2)/2;
+  cx2.bezierCurveTo(x1,my,x2,my,x2,y2);
+  cx2.stroke();
+  cx2.restore();
+}
+function arrowHead(x,y,col){
+  cx2.save(); cx2.fillStyle=col;
+  cx2.beginPath(); cx2.moveTo(x,y); cx2.lineTo(x-5,y-10); cx2.lineTo(x+5,y-10);
+  cx2.closePath(); cx2.fill(); cx2.restore();
+}
+function label(x,y,text,col){
+  cx2.save(); cx2.font='500 9px Inter'; cx2.fillStyle=col; cx2.textAlign='center';
+  cx2.fillText(text,x,y); cx2.restore();
+}
+
+function draw(){
+  cv.width=wrap2.scrollWidth; cv.height=wrap2.scrollHeight;
+  cx2.clearRect(0,0,cv.width,cv.height);
+
+  const main='#3a4265', br='rgba(255,140,66,0.45)', ret='#ff5fa0', blue='#4f80ff', purple='#a259ff', red='rgba(255,79,107,0.55)';
+  const dash=[5,4];
+
+  // main chain: start → 01 → 02 → 03 → 04
+  ['n-start','n-01','n-02','n-03','n-04'].reduce((prev,cur)=>{
+    const a=nb2(prev), b=nb2(cur);
+    bezier(a.cx,a.b,b.cx,b.t,main); arrowHead(b.cx,b.t,main);
+    return cur;
+  });
+
+  // 04 → each 05 → 06
+  const branches=['n-05a','n-05b','n-05c','n-05d','n-05e','n-05f','n-05g'];
+  const n04=nb2('n-04'), n06=nb2('n-06');
+  branches.forEach(bid=>{
+    const br2=nb2(bid);
+    bezier(n04.cx,n04.b,br2.cx,br2.t,br); arrowHead(br2.cx,br2.t,br.replace('0.45','0.9'));
+    bezier(br2.cx,br2.b,n06.cx,n06.t,br); arrowHead(n06.cx,n06.t,br.replace('0.45','0.9'));
+  });
+
+  // 06 → 07 → 08 → end
+  const nodes2=['n-06','n-07','n-08','n-end'];
+  nodes2.reduce((p,c)=>{ const a=nb2(p),b=nb2(c); bezier(a.cx,a.b,b.cx,b.t,main); arrowHead(b.cx,b.t,main); return c; });
+
+  // RETRY arrows — 노드 기준 상대 오프셋 사용 (캔버스 끝까지 가지 않음)
+  const n07=nb2('n-07'), n02=nb2('n-02'), n03=nb2('n-03'), n06b=nb2('n-06');
+  // 노드 우측에서 60px / 80px 떨어진 지점에서만 꺾음
+  const rx  = Math.max(n07.r, n02.r, n03.r) + 60;  // intent_mismatch 라인
+  const rx2 = Math.max(n07.r, n02.r, n03.r) + 86;  // source_mismatch 라인 (살짝 더 바깥)
+
+  // right side: 07 → 02 (intent_mismatch)
+  cx2.save(); cx2.strokeStyle=ret; cx2.lineWidth=1.5; cx2.setLineDash(dash);
+  cx2.beginPath(); cx2.moveTo(n07.r,n07.cy); cx2.lineTo(rx,n07.cy); cx2.lineTo(rx,n02.cy); cx2.lineTo(n02.r,n02.cy); cx2.stroke(); cx2.restore();
+  cx2.save(); cx2.fillStyle=ret; cx2.beginPath(); cx2.moveTo(n02.r+1,n02.cy); cx2.lineTo(n02.r+10,n02.cy-5); cx2.lineTo(n02.r+10,n02.cy+5); cx2.closePath(); cx2.fill(); cx2.restore();
+  label(rx+52,(n07.cy+n02.cy)/2,'intent_mismatch → step_02',ret);
+
+  // right side: 07 → 03 (source_mismatch)
+  cx2.save(); cx2.strokeStyle=blue; cx2.lineWidth=1.5; cx2.setLineDash(dash);
+  cx2.beginPath(); cx2.moveTo(n07.r,n07.cy+10); cx2.lineTo(rx2,n07.cy+10); cx2.lineTo(rx2,n03.cy); cx2.lineTo(n03.r,n03.cy); cx2.stroke(); cx2.restore();
+  cx2.save(); cx2.fillStyle=blue; cx2.beginPath(); cx2.moveTo(n03.r+1,n03.cy); cx2.lineTo(n03.r+10,n03.cy-5); cx2.lineTo(n03.r+10,n03.cy+5); cx2.closePath(); cx2.fill(); cx2.restore();
+  label(rx2+56,(n07.cy+n03.cy)/2,'source_mismatch → step_03',blue);
+
+  // left side: 07 → 06 (retry generate) — 노드 왼쪽에서 60px
+  const lx = Math.min(n07.l, n06b.l) - 60;
+  cx2.save(); cx2.strokeStyle=purple; cx2.lineWidth=1.5; cx2.setLineDash(dash);
+  cx2.beginPath(); cx2.moveTo(n07.l,n07.cy); cx2.lineTo(lx,n07.cy); cx2.lineTo(lx,n06b.cy); cx2.lineTo(n06b.l,n06b.cy); cx2.stroke(); cx2.restore();
+  cx2.save(); cx2.fillStyle=purple; cx2.beginPath(); cx2.moveTo(n06b.l-1,n06b.cy); cx2.lineTo(n06b.l+8,n06b.cy-5); cx2.lineTo(n06b.l+8,n06b.cy+5); cx2.closePath(); cx2.fill(); cx2.restore();
+  label(lx-38,(n07.cy+n06b.cy)/2,'retry: generate → step_06',purple);
+
+  // fallback left: 01,04 → 99 — 노드 왼쪽에서 46px
+  const n01=nb2('n-01'), n04b=nb2('n-04'), n99=nb2('n-99');
+  const flx = Math.min(n01.l, n04b.l, n99.l) - 46;
+  [n01,n04b].forEach(src=>{
+    cx2.save(); cx2.strokeStyle='rgba(255,79,107,0.55)'; cx2.lineWidth=1.3; cx2.setLineDash([4,4]);
+    cx2.beginPath(); cx2.moveTo(src.l,src.cy); cx2.lineTo(flx,src.cy); cx2.lineTo(flx,n99.cy); cx2.lineTo(n99.l,n99.cy); cx2.stroke(); cx2.restore();
+  });
+  cx2.save(); cx2.fillStyle='#ff4f6b'; cx2.beginPath(); cx2.moveTo(n99.l-1,n99.cy); cx2.lineTo(n99.l+9,n99.cy-5); cx2.lineTo(n99.l+9,n99.cy+5); cx2.closePath(); cx2.fill(); cx2.restore();
+  label(flx-34,(n01.cy+n99.cy)/2,'error / fallback','rgba(255,79,107,0.85)');
+}
+
+window.addEventListener('load',()=>setTimeout(draw,350));
+window.addEventListener('resize',draw);
+wrap2.addEventListener('scroll',draw);
+</script>
+</body>
+</html>

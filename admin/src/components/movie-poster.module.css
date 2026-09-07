@@ -1,0 +1,10 @@
+/* ImageFrame의 3:4 비율을 그대로 흉내 내 목록 행 높이가 흔들리지 않게 한다. */
+.empty {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--seed-radius-r2);
+  background: var(--seed-color-bg-layer-fill);
+  color: var(--seed-color-fg-neutral-subtle);
+}

@@ -1,0 +1,18 @@
+[Unit]
+Description=Pop Talk daily movie synchronization
+Wants=network-online.target
+After=network-online.target
+StartLimitIntervalSec=30min
+StartLimitBurst=3
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/popcorn/pop_talk_batch
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/popcorn/pop_talk_batch/.venv/bin/python -m scheduler.daily_sync --days 7
+SyslogIdentifier=pop-talk-scheduler
+StandardOutput=journal
+StandardError=journal
+Restart=on-failure
+RestartSec=5min
+TimeoutStartSec=infinity

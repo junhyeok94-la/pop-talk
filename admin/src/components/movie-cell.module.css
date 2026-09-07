@@ -1,0 +1,29 @@
+.cell {
+  display: flex;
+  gap: var(--seed-dimension-x3);
+  align-items: center;
+}
+
+.title {
+  font-size: var(--seed-font-size-t3);
+  font-weight: var(--seed-font-weight-medium);
+  color: var(--seed-color-fg-neutral);
+}
+
+.meta {
+  font-size: var(--seed-font-size-t2);
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+
+
+
+.adminName {
+  font-size: var(--seed-font-size-t3);
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.none {
+  font-size: var(--seed-font-size-t3);
+  color: var(--seed-color-fg-neutral-subtle);
+}

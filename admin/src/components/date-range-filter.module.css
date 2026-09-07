@@ -1,0 +1,17 @@
+.range {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: center;
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.clear {
+  padding: 0 var(--seed-dimension-x1);
+  font-size: var(--seed-font-size-t2);
+  white-space: nowrap;
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+.clear:hover {
+  color: var(--seed-color-fg-brand);
+}

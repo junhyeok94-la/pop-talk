@@ -1,0 +1,38 @@
+/* 제목·감독이 글자 단위로 접히면 행 높이가 널뛴다. */
+.title {
+  display: flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+  min-width: 7rem;
+  font-weight: var(--seed-font-weight-medium);
+}
+
+/* 컬럼을 늘리지 않고 셀 안에 넣는다. 표가 이미 12칸이라 가로가 부족하다. */
+.unmatched {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--seed-color-fg-warning);
+}
+
+/*
+ * 개봉예정은 경고가 아니라 사실이다. 정렬이 개봉일 역순이라 앞 페이지에 42편이
+ * 몰려 있어서, warning 색을 쓰면 첫 화면이 온통 주황이 된다.
+ * 주의를 끌어야 하는 건 KMDB 미매칭 쪽이다.
+ */
+.upcoming {
+  margin-top: 1px;
+  font-size: var(--seed-font-size-t1);
+  white-space: nowrap;
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+/* service_status는 값이 셋이라 뱃지로 실제 값을 보여주고 스위치를 옆에 둔다. */
+.reason {
+  max-width: 12rem;
+  margin-top: 2px;
+  overflow: hidden;
+  font-size: var(--seed-font-size-t2);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--seed-color-fg-critical);
+}

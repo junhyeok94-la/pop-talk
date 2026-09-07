@@ -1,0 +1,57 @@
+.root {
+  display: inline-flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+  padding-right: var(--seed-dimension-x3);
+  border-right: 1px solid var(--seed-color-stroke-neutral-subtle);
+  cursor: default;
+}
+
+.dot {
+  width: 7px;
+  height: 7px;
+  border-radius: var(--seed-radius-full);
+  flex-shrink: 0;
+}
+
+/*
+ * 확인 중에는 아직 판단할 수 없다. 옅은 회색으로 두고 깜빡인다.
+ * bg-neutral-solid는 #1a1c20으로 거의 검정이라 "꺼짐"처럼 보인다. 쓰지 않는다.
+ */
+.checking {
+  background: var(--seed-color-fg-neutral-subtle);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.ok {
+  background: var(--seed-color-bg-positive-solid);
+}
+
+/* 서버는 살아 있고 DB만 끊긴 상태. 완전한 장애와 구분한다. */
+.degraded {
+  background: var(--seed-color-bg-warning-solid);
+}
+
+.down {
+  background: var(--seed-color-bg-critical-solid);
+}
+
+.label {
+  font-size: var(--seed-font-size-t1);
+  font-weight: var(--seed-font-weight-medium);
+  color: var(--seed-color-fg-neutral-subtle);
+  letter-spacing: 0.02em;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* 움직임을 줄이도록 설정한 사용자에게는 깜빡이지 않는다. */
+@media (prefers-reduced-motion: reduce) {
+  .checking {
+    animation: none;
+  }
+}

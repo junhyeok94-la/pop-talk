@@ -1,0 +1,83 @@
+/*
+ * 뼈대·간격·활성 상태는 Seed SideNavigation이 담당한다.
+ * 여기 남은 것은 Seed가 정해주지 않는 로고/관리자 블록의 내부 배치뿐이다.
+ */
+
+.sidebar {
+  position: sticky;
+  top: 0;
+  flex-shrink: 0;
+  height: 100vh;
+}
+
+.logo {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: center;
+}
+
+.logoMark {
+  font-size: var(--seed-font-size-t7);
+}
+
+.logoTitle {
+  display: block;
+  line-height: 1.2;
+}
+
+.logoSub {
+  display: block;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+
+
+
+
+
+
+/* ── 메뉴 그룹 ────────────────────────────────────────── */
+
+.group + .group {
+  margin-top: var(--seed-dimension-x1);
+}
+
+/* Seed의 GroupLabel은 트리거 안에 넣으면 클릭 영역이 라벨만 남는다. 행 전체를 잡는다. */
+.groupTrigger {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  border-radius: var(--seed-radius-r2);
+  cursor: pointer;
+}
+
+.groupTrigger:hover .groupLabel {
+  color: var(--seed-color-fg-neutral-muted);
+}
+
+.groupLabel {
+  transition: color 120ms ease;
+}
+
+.groupChevron {
+  display: inline-flex;
+  flex-shrink: 0;
+  padding-right: var(--seed-dimension-x2);
+  color: var(--seed-color-fg-neutral-subtle);
+  transition: transform 150ms ease;
+}
+
+/* 열려 있으면 아래를 향하고, 접히면 옆으로 눕는다. */
+.groupTrigger[data-state="closed"] .groupChevron,
+.groupTrigger:not([data-state="open"]):not([data-open]) .groupChevron {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .groupChevron {
+    transition: none;
+  }
+}

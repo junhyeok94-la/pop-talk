@@ -1,0 +1,96 @@
+.panel {
+  display: flex;
+  flex-direction: column;
+}
+
+.avatar {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  font-size: var(--seed-font-size-t2);
+  font-weight: var(--seed-font-weight-bold);
+  border-radius: var(--seed-radius-full);
+  background: var(--seed-color-bg-brand-weak);
+  color: var(--seed-color-fg-brand);
+}
+
+.logHead {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: center;
+}
+
+.logMovie {
+  overflow: hidden;
+  font-size: var(--seed-font-size-t4);
+  font-weight: var(--seed-font-weight-medium);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+
+.queueRow {
+  display: flex;
+  gap: var(--seed-dimension-x3);
+  align-items: center;
+  width: 100%;
+  padding: var(--seed-dimension-x3) var(--seed-dimension-x4);
+  text-align: left;
+  transition: background-color 120ms ease;
+}
+
+.queueRow:hover {
+  background: var(--seed-color-bg-layer-fill);
+}
+
+.queueMeta {
+  display: flex;
+  gap: var(--seed-dimension-x2);
+  align-items: center;
+}
+
+/* ── 빠른 이동 ──────────────────────────────────────── */
+
+.shortcutIcon {
+  display: inline-grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--seed-radius-r3);
+}
+
+.kpiNeutral {
+  background: var(--seed-color-bg-neutral-weak);
+  color: var(--seed-color-fg-neutral-muted);
+}
+.kpiPositive {
+  background: var(--seed-color-bg-positive-weak);
+  color: var(--seed-color-fg-positive);
+}
+.kpiMagic {
+  background: var(--seed-color-bg-magic-weak);
+  color: var(--seed-color-fg-neutral);
+}
+
+
+/* ── 배치 패널 ───────────────────────────────────────── */
+
+.batchNote {
+  display: flex;
+  gap: var(--seed-dimension-x1);
+  align-items: center;
+  margin-bottom: var(--seed-dimension-x2);
+  font-size: var(--seed-font-size-t2);
+  line-height: 1.5;
+  color: var(--seed-color-fg-neutral-subtle);
+}
+
+
+.kpiCritical {
+  background: var(--seed-color-bg-critical-weak);
+  color: var(--seed-color-fg-critical);
+}
